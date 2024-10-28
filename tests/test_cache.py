@@ -1,6 +1,6 @@
-from fakts import Fakts
-from fakts.grants.io.yaml import YamlGrant
-from fakts.grants.meta import CacheGrant
+from fakts_next import Fakts
+from fakts_next.grants.io.yaml import YamlGrant
+from fakts_next.cache.file import FileCache
 import os
 
 
@@ -8,10 +8,10 @@ TESTS_FOLDER = str(os.path.dirname(os.path.abspath(__file__)))
 
 
 def test_cache():
-    grant = CacheGrant(grant=YamlGrant(filepath=f"{TESTS_FOLDER}/test.yaml"))
+    grant = YamlGrant(filepath=f"{TESTS_FOLDER}/test.yaml")
 
-    fakts = Fakts(grant=grant)
+    fakts_next = Fakts(grant=grant, cache=FileCache())
 
-    with fakts:
-        assert fakts.get("test")["hello"]["world"] == "Hello world"
-        assert fakts.get("test.hello.world") == "Hello world"
+    with fakts_next:
+        assert fakts_next.get("test")["hello"]["world"] == "Hello world"
+        assert fakts_next.get("test.hello.world") == "Hello world"

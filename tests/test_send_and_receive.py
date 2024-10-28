@@ -1,6 +1,6 @@
-from fakts.cli.advertise import advertise, retrieve_bindings, AdvertiseBeacon
+from fakts_next.cli.advertise import advertise, retrieve_bindings, AdvertiseBeacon
 import asyncio
-from fakts.grants.remote.discovery.advertised import alisten, ListenBinding
+from fakts_next.grants.remote.discovery.advertised import alisten, ListenBinding
 import pytest
 
 

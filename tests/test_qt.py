@@ -1,16 +1,16 @@
 import os
 
 import pytest
-from fakts.grants.remote.models import FaktsEndpoint
-from fakts.grants.remote.base import RemoteGrant
-from fakts.fakts import Fakts
-from fakts.grants.io.qt.yaml import QtYamlGrant, WrappingWidget, QtSelectYaml
-from fakts.grants.remote.discovery.qt.selectable_beacon import (
+from fakts_next.grants.remote.models import FaktsEndpoint
+from fakts_next.grants.remote.base import RemoteGrant
+from fakts_next.fakts import Fakts
+from fakts_next.grants.io.qt.yaml import QtYamlGrant, WrappingWidget, QtSelectYaml
+from fakts_next.grants.remote.discovery.qt.selectable_beacon import (
     SelectBeaconWidget,
     QtSelectableDiscovery,
 )
-from fakts.grants.remote.demanders.static import StaticDemander
-from fakts.grants.remote.claimers.static import StaticClaimer
+from fakts_next.grants.remote.demanders.static import StaticDemander
+from fakts_next.grants.remote.claimers.static import StaticClaimer
 import uuid
 from koil.qt import QtRunner
 from PyQt5 import QtCore, QtWidgets
@@ -22,20 +22,20 @@ class FaktualBeacon(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.fakts = Fakts(
+        self.fakts_next = Fakts(
             grant=RemoteGrant(
                 discovery=QtSelectableDiscovery(widget=SelectBeaconWidget(parent=self)),
                 demander=StaticDemander(token="sionsoinsoien"),
                 claimer=StaticClaimer(value={"hello": "world"}),
             ),
         )
-        self.fakts.enter()
+        self.fakts_next.enter()
 
-        self.load_fakts_task = QtRunner(self.fakts.aget)
-        self.load_fakts_task.errored.connect(
+        self.load_fakts_next_task = QtRunner(self.fakts_next.aget)
+        self.load_fakts_next_task.errored.connect(
             lambda x: self.greet_label.setText(repr(x))
         )
-        self.load_fakts_task.returned.connect(
+        self.load_fakts_next_task.returned.connect(
             lambda x: self.greet_label.setText(repr(x))
         )
 
@@ -51,7 +51,7 @@ class FaktualBeacon(QtWidgets.QWidget):
         self.button_greet.clicked.connect(self.greet)
 
     def greet(self):
-        self.load_fakts_task.run()
+        self.load_fakts_next_task.run()
         self.greet_label.setText("Loading...")
 
 
@@ -59,15 +59,15 @@ class FaktualYaml(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.fakts = Fakts(
+        self.fakts_next = Fakts(
             grant=QtYamlGrant(widget=WrappingWidget(parent=self)),
         )
-        self.fakts.enter()
-        self.load_fakts_task = QtRunner(self.fakts.aget)
-        self.load_fakts_task.errored.connect(
+        self.fakts_next.enter()
+        self.load_fakts_next_task = QtRunner(self.fakts_next.aget)
+        self.load_fakts_next_task.errored.connect(
             lambda x: self.greet_label.setText(repr(x))
         )
-        self.load_fakts_task.returned.connect(
+        self.load_fakts_next_task.returned.connect(
             lambda x: self.greet_label.setText(repr(x))
         )
 
@@ -83,7 +83,7 @@ class FaktualYaml(QtWidgets.QWidget):
         self.button_greet.clicked.connect(self.greet)
 
     def greet(self):
-        self.load_fakts_task.run()
+        self.load_fakts_next_task.run()
         self.greet_label.setText("Loading...")
 
 
@@ -121,7 +121,7 @@ def test_faktual_beacon(qtbot, monkeypatch):
     qtbot.addWidget(widget)
 
     # click in the Greet button and make sure it updates the appropriate label
-    with qtbot.waitSignal(widget.load_fakts_task.returned) as b:
+    with qtbot.waitSignal(widget.load_fakts_next_task.returned) as b:
         # click in the Greet button and make sure it updates the appropriate label
         qtbot.mouseClick(widget.button_greet, QtCore.Qt.LeftButton)
         assert widget.greet_label.text() == "Loading..."
@@ -147,7 +147,7 @@ def test_faktual_yaml(qtbot, monkeypatch):
     widget = FaktualYaml()
     qtbot.addWidget(widget)
 
-    with qtbot.waitSignal(widget.load_fakts_task.returned) as b:
+    with qtbot.waitSignal(widget.load_fakts_next_task.returned) as b:
         # click in the Greet button and make sure it updates the appropriate label
         qtbot.mouseClick(widget.button_greet, QtCore.Qt.LeftButton)
 

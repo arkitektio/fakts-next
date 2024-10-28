@@ -8,7 +8,7 @@ from koil.helpers import unkoil
 from pydantic import Field
 from typing import Optional
 from fakts.errors import GroupNotFound, NoFaktsFound
-
+from fakts_next.cache.nocache import NoCache
 from .protocols import FaktsCache, FaktValue, FaktsGrant
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class Fakts(KoiledModel):
 
 
     """
-    cache: FaktsCache
+    cache: FaktsCache = Field(default_factory=NoCache, exclude=True)
     grant: FaktsGrant
     """The grant to load the configuration from"""
 

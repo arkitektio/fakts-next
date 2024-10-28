@@ -3,7 +3,7 @@ from fakts_next.grants.errors import GrantError
 import yaml
 from koil.qt import QtCoro, QtFuture
 from qtpy import QtWidgets
-from fakts_next.protocols import FaktsRequest, FaktValue
+from fakts_next.protocols import FaktValue
 from typing import Dict, Protocol, runtime_checkable, Optional, Type
 from pydantic import BaseModel
 
@@ -144,7 +144,7 @@ class QtYamlGrant(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     widget: FileWidget = Field(exclude=True)
 
-    async def aload(self, request: FaktsRequest) -> Dict[str, FaktValue]:
+    async def aload(self) -> Dict[str, FaktValue]:
         """Loads the YAML file and returns the configuration.
 
         Parameters

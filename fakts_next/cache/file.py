@@ -4,7 +4,7 @@ import pydantic
 import datetime
 import logging
 import json
-from fakts.protocols import FaktValue, FaktsGrant
+from fakts_next.protocols import FaktValue, FaktsGrant
 
 logger = logging.getLogger(__name__)
 

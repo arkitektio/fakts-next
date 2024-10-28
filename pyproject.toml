@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "fakts"
+name = "fakts-next"
 version = "1.0.0"
 description = "asynchronous configuration provider ( tailored to support dynamic client-server relations)"
 authors = ["jhnnsrs <jhnnsrs@gmail.com>"]
 license = "CC BY-NC 3.0"
 readme = "README.md"
-packages = [{ include = "fakts" }]
+packages = [{ include = "fakts_next" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"

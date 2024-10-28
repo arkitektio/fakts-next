@@ -1,9 +1,9 @@
-from fakts.grants.remote.discovery.advertised import alisten, ListenBinding
+from fakts_next.grants.remote.discovery.advertised import alisten, ListenBinding
 import asyncio
 import pytest
 
 async def listener():
-    binding = ListenBinding(port=4234, magic_phrase="beacon-fakts")
+    binding = ListenBinding(port=4234, magic_phrase="beacon-fakts_next")
     try:
         async for beacon in alisten(binding):
             print(beacon)
