@@ -7,7 +7,7 @@ from koil.composition import KoiledModel
 from koil.helpers import unkoil
 from pydantic import Field
 from typing import Optional
-from fakts.errors import GroupNotFound, NoFaktsFound
+from fakts_next.errors import GroupNotFound, NoFaktsFound
 from fakts_next.cache.nocache import NoCache
 from .protocols import FaktsCache, FaktValue, FaktsGrant
 

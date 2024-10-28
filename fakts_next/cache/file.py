@@ -127,7 +127,6 @@ class FileCache(pydantic.BaseModel):
         )
 
         with open(self.cache_file, "w+") as f:
-            print("Setting cache", cache.model_dump_json())
             json.dump(json.loads(cache.model_dump_json()), f)
 
 

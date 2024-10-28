@@ -1,10 +1,10 @@
 import logging
 from qtpy import QtCore
 
-from fakts.grants.remote.models import FaktsEndpoint
+from fakts_next.grants.remote.models import FaktsEndpoint
 from typing import Optional, Dict
 import datetime
-from fakts.protocols import FaktValue
+from fakts_next.protocols import FaktValue
 from pydantic import BaseModel, ConfigDict, Field
 from fakts_next.cache.model import CacheModel
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class QtSettingsCache(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     settings: QtCore.QSettings
-    save_key: str
+    save_key: str = "fakts_cache"
     hash: str = Field(
         default_factory=lambda: "",
         description="Validating against the hash of the config",

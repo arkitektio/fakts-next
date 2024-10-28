@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fakts-next"
-version = "1.0.0"
+version = "1.0.2"
 description = "asynchronous configuration provider ( tailored to support dynamic client-server relations)"
 authors = ["jhnnsrs <jhnnsrs@gmail.com>"]
 license = "CC BY-NC 3.0"
