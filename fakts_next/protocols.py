@@ -56,10 +56,6 @@ class FaktsGrant(Protocol):
         ...
 
 
-
-
-
-
 @runtime_checkable
 class FaktsCache(Protocol):
     """FaktsGrant
@@ -109,7 +105,6 @@ class FaktsCache(Protocol):
         """
         ...
 
-
     async def aset(self, value: Dict[str, FaktValue]) -> None:
         """Refreshes the configuration from the grant
 
@@ -127,4 +122,3 @@ class FaktsCache(Protocol):
         This function is used to reset the cache
         """
         ...
-

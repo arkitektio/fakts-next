@@ -27,7 +27,9 @@ class ClaimEndpointClaimer(BaseModel):
     """ An ssl context to use for the connection to the endpoint"""
 
     async def aclaim(
-        self, token: str, endpoint: FaktsEndpoint,
+        self,
+        token: str,
+        endpoint: FaktsEndpoint,
     ) -> Dict[str, FaktValue]:
         """Claims the configuration from the endpoint
 

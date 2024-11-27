@@ -51,7 +51,6 @@ class ParallelGrant(BaseModel):
         )
         # TODO: Check if this is the correct way to merge the configs
         return reduce(lambda x, y: update_nested(x, y), configs, {})  # type: ignore
-    
 
     async def arefresh(self):
         config_futures = [grant.arefresh() for grant in self.grants]

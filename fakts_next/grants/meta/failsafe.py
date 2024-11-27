@@ -45,7 +45,6 @@ class FailsafeGrant(BaseFaktsGrant):
                 continue
 
         raise GrantError("Failed to load any grants")
-    
 
     async def arefresh(self) -> Dict[str, FaktValue]:
         """Loads the configuration from the grant
@@ -74,5 +73,3 @@ class FailsafeGrant(BaseFaktsGrant):
                 continue
 
         raise GrantError("Failed to load any grants")
-    
-

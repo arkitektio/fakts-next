@@ -1,4 +1,8 @@
-from fakts_next.grants.remote.discovery.advertised import alisten_pure, ListenBinding, Beacon
+from fakts_next.grants.remote.discovery.advertised import (
+    alisten_pure,
+    ListenBinding,
+    Beacon,
+)
 from qtpy import QtWidgets, QtCore, QtGui
 import asyncio
 import logging

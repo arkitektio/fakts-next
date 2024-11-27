@@ -1,6 +1,6 @@
 from pydantic import Field
 from typing import Any, Dict
-from fakts_next.grants.remote.models import FaktsEndpoint,  FaktValue
+from fakts_next.grants.remote.models import FaktsEndpoint, FaktValue
 from pydantic import BaseModel
 
 
@@ -19,7 +19,9 @@ class StaticClaimer(BaseModel):
     """ An ssl context to use for the connection to the endpoint"""
 
     async def aclaim(
-        self, token: str, endpoint: FaktsEndpoint, 
+        self,
+        token: str,
+        endpoint: FaktsEndpoint,
     ) -> Dict[str, FaktValue]:
         """Claim the configuration from the endpoint"""
 

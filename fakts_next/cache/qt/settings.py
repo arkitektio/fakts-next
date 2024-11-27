@@ -7,6 +7,7 @@ import datetime
 from fakts_next.protocols import FaktValue
 from pydantic import BaseModel, ConfigDict, Field
 from fakts_next.cache.model import CacheModel
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +23,6 @@ class QtSettingsCache(BaseModel):
         description="Validating against the hash of the config",
     )
 
-
     async def aset(self, value: Dict[str, FaktValue]) -> None:
         """Stores the value in the settings
 
@@ -35,9 +35,6 @@ class QtSettingsCache(BaseModel):
         cache = CacheModel(
             config=value, created=datetime.datetime.now(), hash=self.hash
         )
-
-
-
 
         self.settings.setValue(self.save_key, cache.model_dump_json())
 
@@ -57,9 +54,7 @@ class QtSettingsCache(BaseModel):
             storage = CacheModel.model_validate_json(un_storage)
             if storage.hash != self.hash:
                 return None
-            
 
-            
             return storage.config
         except Exception as e:
             print(e)

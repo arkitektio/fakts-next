@@ -68,6 +68,7 @@ class Fakts(KoiledModel):
 
 
     """
+
     cache: FaktsCache = Field(default_factory=NoCache, exclude=True)
     grant: FaktsGrant
     """The grant to load the configuration from"""
@@ -197,7 +198,6 @@ class Fakts(KoiledModel):
         self.loaded_fakts = {}
         await self.cache.areset()
         return await self.aload()
-    
 
     def refresh(self, **kwargs) -> Dict[str, Any]:
         """Causes a Refresh, by reloading the grants"""
@@ -259,7 +259,7 @@ class Fakts(KoiledModel):
         except Exception as e:
             logger.error(e, exc_info=True)
             raise e
-        
+
         # Cache is empty, we need to reload the grants
         if not self.loaded_fakts:
             try:
@@ -270,14 +270,12 @@ class Fakts(KoiledModel):
                 raise e
 
         return self.loaded_fakts
-    
 
     async def arefresh(self) -> Dict[str, FaktValue]:
 
         self.loaded_fakts = None
         await self.cache.areset()
         return await self.aload()
-
 
     def load(self) -> Dict[str, FaktValue]:
         """Loads the configuration from the grant (sync)

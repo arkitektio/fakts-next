@@ -2,9 +2,8 @@ from typing import Dict
 from fakts_next.protocols import FaktValue
 from pydantic import BaseModel
 
+
 class BaseFaktsGrant(BaseModel):
-
-
 
     async def aload(self) -> Dict[str, FaktValue]:
         """Loads the configuration from the grant
@@ -40,7 +39,6 @@ class BaseFaktsGrant(BaseModel):
 
         """
         raise NotImplementedError("aload not implemented by the grant")
-
 
     async def arefresh(self) -> Dict[str, FaktValue]:
         """Refreshes the configuration from the grant

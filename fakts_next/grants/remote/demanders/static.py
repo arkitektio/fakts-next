@@ -42,4 +42,3 @@ class StaticDemander(BaseModel):
             The token that was retrieved
         """
         return self.token.get_secret_value()
-    

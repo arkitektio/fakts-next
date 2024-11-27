@@ -85,9 +85,7 @@ class FileCache(pydantic.BaseModel):
 
         cache = None
 
-        if (
-            os.path.exists(self.cache_file)
-        ):
+        if os.path.exists(self.cache_file):
             with open(self.cache_file, "r") as f:
                 x = json.load(f)
                 try:
@@ -107,8 +105,7 @@ class FileCache(pydantic.BaseModel):
                     logger.error(f"Could not load cache file: {e}. Ignoring it")
 
                 if cache is None:
-                        return None
-                
+                    return None
 
                 return cache.config
 
@@ -122,13 +119,10 @@ class FileCache(pydantic.BaseModel):
         The request object is used to pass information
         """
 
-        cache = CacheFile(
-            config=value, created=datetime.datetime.now(), hash=self.hash
-        )
+        cache = CacheFile(config=value, created=datetime.datetime.now(), hash=self.hash)
 
         with open(self.cache_file, "w+") as f:
             json.dump(json.loads(cache.model_dump_json()), f)
-
 
     async def areset(self):
         """Resets the cache
@@ -143,5 +137,3 @@ class FileCache(pydantic.BaseModel):
         if os.path.exists(self.cache_file):
             os.remove(self.cache_file)
         return None
-
-

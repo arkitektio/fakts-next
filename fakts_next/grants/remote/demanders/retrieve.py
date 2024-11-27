@@ -93,7 +93,6 @@ class RetrieveDemander(BaseModel):
                     raise RetrieveError(
                         "Error! Coud not claim this app on this endpoint"
                     )
-                
 
     async def arefresh(self, endpoint: FaktsEndpoint, request: FaktsRequest) -> str:
         """Refreshes the token for the given endpoint.

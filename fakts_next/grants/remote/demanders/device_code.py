@@ -86,10 +86,7 @@ class DeviceCodeDemander(BaseModel):
     @model_validator(mode="after")
     def check_requested_matches_redirect_uris(cls: Type["DeviceCodeDemander"], self: "DeviceCodeDemander", info) -> Dict[str, Any]:  # type: ignore
         """Validates and checks that either a schema_dsl or schema_glob is provided, or that allow_introspection is set to True"""
-        if (
-            not self.redirect_uris
-            and self.requested_client_kind == ClientKind.WEBSITE
-        ):
+        if not self.redirect_uris and self.requested_client_kind == ClientKind.WEBSITE:
             raise ValueError(
                 "You must provide a redirect uri if you want to request a website client"
             )
@@ -224,4 +221,3 @@ class DeviceCodeDemander(BaseModel):
                         raise DeviceCodeError(
                             f"Error! Could not retrieve code {await response.text()}"
                         )
-
