@@ -140,17 +140,21 @@ class Fakts(KoiledModel):
                 except Exception as e:
                     logger.error(e, exc_info=True)
                     raise e
-                
+
                 try:
                     config = self._getsubgroup(group_name, base=group_name)
                 except GroupNotFound as e:
-                    raise GroupNotFound(f"Could't find {group_name} in fakts. Even after refresh") from e
+                    raise GroupNotFound(
+                        f"Could't find {group_name} in fakts. Even after refresh"
+                    ) from e
             else:
                 raise e
 
         return config
 
-    def _getsubgroup(self, group_name: Optional[str] = None, base: str = "") -> Dict[str, Any]:
+    def _getsubgroup(
+        self, group_name: Optional[str] = None, base: str = ""
+    ) -> Dict[str, Any]:
         """Get subgroup
 
         Protected function to get a subgroup from the loaded fakts
@@ -168,7 +172,7 @@ class Fakts(KoiledModel):
 
         if group_name is None:
             return config
-        
+
         path = []
 
         for subgroup in group_name.split("."):
@@ -176,7 +180,11 @@ class Fakts(KoiledModel):
                 path += [subgroup]
                 config = config[subgroup]
             except KeyError as e:
-                raise GroupNotFound(f"Could't find {subgroup} in subgroup when trying to access '" + " > ".join(path) + f"'. Available keys in this config are {', '.join(list(config.keys()))}") from e
+                raise GroupNotFound(
+                    f"Could't find {subgroup} in subgroup when trying to access '"
+                    + " > ".join(path)
+                    + f"'. Available keys in this config are {', '.join(list(config.keys()))}"
+                ) from e
 
         return config
 

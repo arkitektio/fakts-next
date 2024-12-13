@@ -21,7 +21,7 @@ logo = """
  |_| \__,_|_\_\\__/__/                     
  """
 
-welcome = "\nThe fakts_next beacon lets you advertise a fakts_next endpoint on your local network. This is useful if you want to advertise a fakts_next endpoint to other devices on your local network."
+welcome = r"\nThe fakts_next beacon lets you advertise a fakts_next endpoint on your local network. This is useful if you want to advertise a fakts_next endpoint to other devices on your local network."
 
 
 async def adversite_all(
