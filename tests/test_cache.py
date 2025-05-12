@@ -13,5 +13,10 @@ def test_cache():
     fakts_next = Fakts(grant=grant, cache=FileCache())
 
     with fakts_next:
-        assert fakts_next.get("test")["hello"]["world"] == "Hello world"
+        
+        values = fakts_next.get("test")
+        assert isinstance(values, dict), "Fakts: test is not a dict"
+        hello = values.get("hello")
+        assert isinstance(hello, dict), "Fakts: test.hello is not a dict"
+        assert hello["world"] == "Hello world"
         assert fakts_next.get("test.hello.world") == "Hello world"

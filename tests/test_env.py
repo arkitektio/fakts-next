@@ -10,7 +10,7 @@ def test_env_grant():
     fakts_next = Fakts(grant=EnvGrant())
     with fakts_next:
         assert (
-            fakts_next.get("test")["hello"]["world"] == "KARL"
+            fakts_next.get("test.hello.world")== "KARL"
         ), "Incorrectly loaded the fakts_next"
 
 
@@ -30,5 +30,5 @@ def test_env_grant_with_delimiter():
     fakts_next = Fakts(grant=EnvGrant(delimiter="-"))
     with fakts_next:
         assert (
-            fakts_next.get("test")["hello"]["world"] == "Hello World"
+            fakts_next.get("test.hello.world") == "Hello World"
         ), "Incorrectly loaded the fakts_next"

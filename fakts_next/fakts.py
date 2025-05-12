@@ -2,7 +2,6 @@ import asyncio
 import contextvars
 import logging
 from typing import Any, Dict, Type
-
 from koil.composition import KoiledModel
 from koil.helpers import unkoil
 from pydantic import Field
@@ -12,9 +11,7 @@ from fakts_next.cache.nocache import NoCache
 from .protocols import FaktsCache, FaktValue, FaktsGrant
 
 logger = logging.getLogger(__name__)
-current_fakts_next: contextvars.ContextVar[Optional["Fakts"]] = contextvars.ContextVar(
-    "current_fakts_next", default=None
-)
+current_fakts_next: contextvars.ContextVar[Optional["Fakts"]] = contextvars.ContextVar("current_fakts_next", default=None)
 
 
 class Fakts(KoiledModel):
@@ -79,9 +76,7 @@ class Fakts(KoiledModel):
     loaded_fakts: Optional[Dict[str, Any]] = Field(default=None, exclude=True)
     """The currently loaded fakts. Please use `get` to access the fakts"""
 
-    allow_auto_load: bool = Field(
-        default=True, description="Should we autoload on get?"
-    )
+    allow_auto_load: bool = Field(default=True, description="Should we autoload on get?")
     """Should we autoload the grants on a call to get?"""
 
     load_on_enter: bool = False
@@ -116,9 +111,7 @@ class Fakts(KoiledModel):
         Returns:
             dict: The active fakts
         """
-        assert self._lock is not None, (
-            "You need to enter the context first before calling this function"
-        )
+        assert self._lock is not None, "You need to enter the context first before calling this function"
         async with self._lock:
             if not self.loaded_fakts:
                 try:
@@ -140,17 +133,13 @@ class Fakts(KoiledModel):
                 try:
                     config = self._getsubgroup(group_name, base=group_name)
                 except GroupNotFound as e:
-                    raise GroupNotFound(
-                        f"Could't find {group_name} in fakts. Even after refresh"
-                    ) from e
+                    raise GroupNotFound(f"Could't find {group_name} in fakts. Even after refresh") from e
             else:
                 raise e
 
         return config
 
-    def _getsubgroup(
-        self, group_name: Optional[str] = None, base: str | None = None
-    ) -> Dict[str, Any]:
+    def _getsubgroup(self, group_name: Optional[str] = None, base: str | None = None) -> Dict[str, Any]:
         """Get subgroup
 
         Protected function to get a subgroup from the loaded fakts
@@ -165,9 +154,7 @@ class Fakts(KoiledModel):
             Dict[str, Any]: The subgroups configuration as a dictioniary
         """
         if not self.loaded_fakts:
-            raise GroupNotFound(
-                f"Could't find {group_name} in fakts. No loaded fakts found"
-            )
+            raise GroupNotFound(f"Could't find {group_name} in fakts. No loaded fakts found")
 
         if base is None:
             base = ""
@@ -184,11 +171,7 @@ class Fakts(KoiledModel):
                 path += [subgroup]
                 config = config[subgroup]
             except KeyError as e:
-                raise GroupNotFound(
-                    f"Could't find {subgroup} in subgroup when trying to access '"
-                    + " > ".join(path)
-                    + f"'. Available keys in this config are {', '.join(list(config.keys()))}"
-                ) from e
+                raise GroupNotFound(f"Could't find {subgroup} in subgroup when trying to access '" + " > ".join(path) + f"'. Available keys in this config are {', '.join(list(config.keys()))}") from e
 
         return config
 
@@ -211,9 +194,7 @@ class Fakts(KoiledModel):
             True if the value has changed, False otherwise
         """
 
-        return (
-            not value or self._getsubgroup(group) != value
-        )  # TODO: Implement Hashing on config?
+        return not value or self._getsubgroup(group) != value  # TODO: Implement Hashing on config?
 
     async def arefresh(self) -> Dict[str, Any]:
         """Causes a Refresh, by reloading the grants"""
@@ -322,9 +303,7 @@ class Fakts(KoiledModel):
         processed at a time.
         """
 
-        current_fakts_next.set(
-            self
-        )  # TODO: We should set tokens, but depending on async/sync this is shit
+        current_fakts_next.set(self)  # TODO: We should set tokens, but depending on async/sync this is shit
         self._lock = asyncio.Lock()
         return self
 
@@ -335,9 +314,7 @@ class Fakts(KoiledModel):
         traceback: Optional[Any],
     ) -> None:
         """Exit the context manager and clean up"""
-        current_fakts_next.set(
-            None
-        )  # TODO: And here we should reset, but can't because of koil unsafe thread
+        current_fakts_next.set(None)  # TODO: And here we should reset, but can't because of koil unsafe thread
 
     def _repr_html_inline_(self) -> str:
         """(Internal) HTML representation for jupyter"""

@@ -8,4 +8,4 @@ TESTS_FOLDER = str(os.path.dirname(os.path.abspath(__file__)))
 def test_yaml_grant():
     fakts_next = Fakts(grant=YamlGrant(filepath=f"{TESTS_FOLDER}/test.yaml"))
     with fakts_next:
-        assert fakts_next.get("test")["hello"]["world"] == "Hello world"
+        assert fakts_next.get("test.hello.world") == "Hello world"

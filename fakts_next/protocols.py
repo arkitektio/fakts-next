@@ -1,8 +1,8 @@
 from typing import Dict, Any, Optional, Union, Protocol, runtime_checkable
 
 
-NestedFaktValue = Union[str, int, float, bool, None, Dict[str, Any]]
-FaktValue = Union[str, int, float, bool, None, Dict[str, NestedFaktValue]]
+NestedFaktValue = Union[str, int, float, bool, None, Dict[str, Any], list[Any]]
+FaktValue = Union[str, int, float, bool, None, Dict[str, NestedFaktValue], list[NestedFaktValue]]
 
 
 @runtime_checkable
