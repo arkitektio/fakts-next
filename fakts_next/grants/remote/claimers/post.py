@@ -60,6 +60,7 @@ class ClaimEndpointClaimer(BaseModel):
                 f"{endpoint.base_url}claim/",
                 json={
                     "token": token,
+                    "secure": endpoint.base_url.startswith("https"),
                 },
             ) as resp:
                 data = await resp.json()
@@ -74,6 +75,8 @@ class ClaimEndpointClaimer(BaseModel):
                         raise ClaimError(data["message"])
                     if status == "granted":
                         return data["config"]
+                    if status == "denied":
+                        raise ClaimError("Access denied")
 
                     raise ClaimError(f"Unexpected status: {status}")
                 else:

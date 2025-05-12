@@ -1,4 +1,3 @@
-from pydantic import BaseModel
 from typing import Dict, Any, Optional, Union, Protocol, runtime_checkable
 
 
@@ -116,7 +115,7 @@ class FaktsCache(Protocol):
         """
         ...
 
-    async def areset():
+    async def areset(self):
         """Resets the cache
 
         This function is used to reset the cache

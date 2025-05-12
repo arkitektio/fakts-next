@@ -1,6 +1,7 @@
 import logging
 from qtpy import QtCore
 
+
 from fakts_next.grants.remote.models import FaktsEndpoint
 from typing import Optional, Dict
 import datetime
@@ -16,7 +17,7 @@ class QtSettingsCache(BaseModel):
     active fakts grant"""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    settings: QtCore.QSettings
+    settings: QtCore.QSettings  # type: ignore #
     save_key: str = "fakts_cache"
     hash: str = Field(
         default_factory=lambda: "",
@@ -36,7 +37,7 @@ class QtSettingsCache(BaseModel):
             config=value, created=datetime.datetime.now(), hash=self.hash
         )
 
-        self.settings.setValue(self.save_key, cache.model_dump_json())
+        self.settings.setValue(self.save_key, cache.model_dump_json())  # type: ignore #
 
     async def aload(self) -> Optional[Dict[str, FaktValue]]:
         """Loads the value from the settings
@@ -47,9 +48,13 @@ class QtSettingsCache(BaseModel):
             The value, or None if there is no value
         """
 
-        un_storage = self.settings.value(self.save_key, None)
+        un_storage: str = self.settings.value(self.save_key, None)  # type: ignore #
         if not un_storage:
             return None
+
+        if not isinstance(un_storage, str):
+            logger.warning("Cache is not a string")
+            raise ValueError("Cache is not a string")
         try:
             storage = CacheModel.model_validate_json(un_storage)
             if storage.hash != self.hash:
@@ -57,7 +62,7 @@ class QtSettingsCache(BaseModel):
 
             return storage.config
         except Exception as e:
-            print(e)
+            logger.error("Cache is not a string", exc_info=e)
 
         return None
 
@@ -71,4 +76,4 @@ class QtSettingsCache(BaseModel):
 
         """
 
-        self.settings.setValue(self.save_key, None)
+        self.settings.setValue(self.save_key, None)  # type: ignore #

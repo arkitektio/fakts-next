@@ -1,12 +1,10 @@
-from fakts_next.grants.errors import GrantError
+from ..errors import GrantError
 from typing import Dict
 import logging
 
-from fakts_next.grants.remote.errors import ClaimError
 from .models import Demander, Discovery, Claimer
-from fakts_next.protocols import FaktValue
-from pydantic import BaseModel, ConfigDict, Field
-from fakts_next.grants.remote.claimers.static import StaticClaimer
+from ...protocols import FaktValue
+from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,8 @@
-from typing import Any, Dict, Optional
-from fakts_next.protocols import FaktValue, FaktsGrant
+from typing import Dict, Optional
+from fakts_next.protocols import FaktValue, FaktsCache
 
 
-class NoCache:
-
+class NoCache(FaktsCache):
     async def aload(self) -> Optional[Dict[str, FaktValue]]:
         """Loads the configuration from the grant
 
@@ -23,8 +22,6 @@ class NoCache:
 
 
         """
-
-        cache = None
 
         return None
 

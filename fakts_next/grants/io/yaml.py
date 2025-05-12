@@ -1,7 +1,7 @@
 import yaml
 from fakts_next.protocols import FaktValue
 from typing import Dict
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 from fakts_next.grants.base import BaseFaktsGrant
 
 

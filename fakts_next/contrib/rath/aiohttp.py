@@ -1,4 +1,4 @@
-""" Provides  a fakts implementaiton of the aiohttp link"""
+"""Provides  a fakts implementaiton of the aiohttp link"""
 
 from typing import Any, Dict, Optional
 from pydantic import BaseModel
@@ -27,7 +27,6 @@ class FaktsAIOHttpLink(AIOHttpLink):
 
     fakts: Fakts
     """The fakts context to use for configuration"""
-    endpoint_url: Optional[str]  # type: ignore
 
     fakts_group: str
     """ The fakts group within the fakts context to use for configuration """
@@ -45,9 +44,8 @@ class FaktsAIOHttpLink(AIOHttpLink):
         and configure the link with it. Before connecting, it will check if the
         configuration has changed, and if so, it will reconfigure the link.
         """
-        if self.fakts.has_changed(self._old_fakt, self.fakts_group):
-            self._old_fakt = await self.fakts.aget(self.fakts_group)
-            assert self._old_fakt is not None, "Fakt should not be None"
-            self.configure(AioHttpConfig(**self._old_fakt))
+        fakt = await self.fakts.aget(self.fakts_group)
+        assert isinstance(fakt, dict), "FaktsAIOHttpLink: fakts group is not a dict"
+        self.configure(AioHttpConfig(**fakt))  # type: ignore
 
         return await super().aconnect(operation)

@@ -4,7 +4,6 @@ from urllib.parse import urlencode
 import webbrowser
 import aiohttp
 import time
-from typing import Any, Dict, Type
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from fakts_next.grants.remote import FaktsEndpoint
 from fakts_next.grants.remote.errors import DemandError
@@ -13,7 +12,11 @@ import ssl
 import certifi
 from typing import List
 from enum import Enum
-from .utils import print_device_code_prompt, print_succesfull_login
+from .utils import (
+    acheck_supported_layers,
+    print_device_code_prompt,
+    print_succesfull_login,
+)
 
 
 class DeviceCodeError(DemandError):
@@ -63,7 +66,7 @@ class DeviceCodeDemander(BaseModel):
     manifest: BaseModel
     """ An ssl context to use for the connection to the endpoint"""
     expiration_time_seconds: int = Field(
-        300, description="The expiration time of the token in seconds"
+        default=300, description="The expiration time of the token in seconds"
     )
     """The expiration time of the token in seconds"""
     redirect_uris: List[str] = Field(
@@ -84,7 +87,9 @@ class DeviceCodeDemander(BaseModel):
     """If set to True, the URL will be opened in the default browser (if exists). Otherwise the user will be prompted to enter the code manually."""
 
     @model_validator(mode="after")
-    def check_requested_matches_redirect_uris(cls: Type["DeviceCodeDemander"], self: "DeviceCodeDemander", info) -> Dict[str, Any]:  # type: ignore
+    def check_requested_matches_redirect_uris(
+        self: "DeviceCodeDemander",
+    ) -> "DeviceCodeDemander":  # type: ignore
         """Validates and checks that either a schema_dsl or schema_glob is provided, or that allow_introspection is set to True"""
         if not self.redirect_uris and self.requested_client_kind == ClientKind.WEBSITE:
             raise ValueError(
@@ -121,6 +126,7 @@ class DeviceCodeDemander(BaseModel):
                         "expiration_time_seconds": self.expiration_time_seconds,
                         "redirect_uris": self.redirect_uris,
                         "requested_client_kind": self.requested_client_kind,
+                        "supported_layers": await acheck_supported_layers(endpoint),
                     },
                 ) as response:
                     if response.status == HTTPStatus.OK:
@@ -216,6 +222,16 @@ class DeviceCodeDemander(BaseModel):
                                 print_succesfull_login()
 
                             return result["token"]
+
+                        if result["status"] == "error":
+                            raise DeviceCodeError(
+                                f"Error! Could not retrieve code: {result.get('error', 'Unknown Error')}"
+                            )
+
+                        if result["status"] == "denied":
+                            raise DeviceCodeError(
+                                f"Denied! The user Denied: {result.get('message', 'Unknown Error')}"
+                            )
 
                     else:
                         raise DeviceCodeError(

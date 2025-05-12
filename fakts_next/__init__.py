@@ -23,7 +23,6 @@ from .grants import EnvGrant, GrantError
 
 __all__ = [
     "Fakts",
-    "Fakt",
     "FaktsGrant",
     "EnvGrant",
     "GrantError",

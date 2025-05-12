@@ -1,6 +1,16 @@
-from typing import Protocol, runtime_checkable, Optional, Dict
+from typing import List, Protocol, runtime_checkable, Optional, Dict, Literal
 from pydantic import BaseModel
 from fakts_next.protocols import FaktValue
+
+
+
+
+class Layer(BaseModel):
+    identifier: str
+    kind: Literal["WEB", "TAILSCALE"]
+    dns_probe: str | None = None
+    get_probe: str | None = None
+    description: str | None = None
 
 
 class FaktsEndpoint(BaseModel):
@@ -21,6 +31,7 @@ class FaktsEndpoint(BaseModel):
     claim_url: Optional[str] = None
     version: Optional[str] = None
     ca_crt: Optional[str] = None
+    layers: Optional[List[Layer]] = None
 
 
 @runtime_checkable

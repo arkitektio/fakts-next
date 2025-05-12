@@ -14,7 +14,7 @@ class NoFileSelected(GrantError):
     pass
 
 
-class QtSelectYaml(QtWidgets.QFileDialog):
+class QtSelectYaml(QtWidgets.QFileDialog):  # type: ignore
     """
     Represents a File Dialog that selects YAML files.
 
@@ -24,11 +24,11 @@ class QtSelectYaml(QtWidgets.QFileDialog):
         Opens the file dialog and returns the selected file path.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:  # type: ignore
         """A File Dialog that selects YAML files."""
-        super().__init__(*args, **kwargs)
-        self.setFileMode(QtWidgets.QFileDialog.ExistingFile)
-        self.setNameFilter("YAML files (*.yaml)")
+        super().__init__(*args, **kwargs)  # type: ignore
+        self.setFileMode(QtWidgets.QFileDialog.ExistingFile)  # type: ignore
+        self.setNameFilter("YAML files (*.yaml)")  # type: ignore
 
     @classmethod
     def ask(
@@ -47,11 +47,11 @@ class QtSelectYaml(QtWidgets.QFileDialog):
         str
             The file path of the selected file.
         """
-        filepath, weird = cls.getOpenFileName(parent=parent, caption="Select a Yaml")
-        return filepath
+        filepath, weird = cls.getOpenFileName(parent=parent, caption="Select a Yaml")  # type: ignore
+        return filepath if weird else ""  # type: ignore
 
 
-class WrappingWidget(QtWidgets.QWidget):
+class WrappingWidget(QtWidgets.QWidget):  # type: ignore
     """
     A Widget that wraps the file selection process.
 
@@ -68,12 +68,12 @@ class WrappingWidget(QtWidgets.QWidget):
         Opens the file dialog and resolves or rejects the future based on the selected file path.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:  # type: ignore
         """A Widget that wraps the file selection process."""
-        super().__init__(*args, **kwargs)
-        self.get_file_coro = QtCoro(self.open_file)
+        super().__init__(*args, **kwargs)  # type: ignore
+        self.get_file_coro = QtCoro(self.open_file)  # type: ignore
 
-    def open_file(self, future: QtFuture) -> None:
+    def open_file(self, future: QtFuture[str]) -> None:  # type: ignore
         """
         Opens the file dialog and resolves or rejects the future based on the selected file path.
 
@@ -82,7 +82,7 @@ class WrappingWidget(QtWidgets.QWidget):
         future : QtFuture
             The future that will be resolved or rejected based on the selected file path.
         """
-        filepath = QtSelectYaml.ask(parent=self)
+        filepath = QtSelectYaml.ask(parent=self)  # type: ignore
 
         if filepath:
             future.resolve(filepath)
@@ -98,7 +98,7 @@ class WrappingWidget(QtWidgets.QWidget):
         str
             The file path of the selected file.
         """
-        return await self.get_file_coro.acall()
+        return await self.get_file_coro.acall()  # type: ignore
 
 
 @runtime_checkable

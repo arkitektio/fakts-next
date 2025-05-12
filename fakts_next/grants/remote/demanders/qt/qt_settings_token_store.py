@@ -24,7 +24,7 @@ class QTSettingTokenStore(BaseModel):
     active fakts_next grant"""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    settings: QtCore.QSettings
+    settings: QtCore.QSettings  # type: ignore
     """The settings to use to store the tokens"""
     save_key: str
     """The key to use to store the tokens"""
@@ -43,23 +43,22 @@ class QTSettingTokenStore(BaseModel):
             The token to put, or None to delete the token
         """
 
-        un_storage = self.settings.value(self.save_key, None)
+        un_storage = self.settings.value(self.save_key, None)  # type: ignore
         if not un_storage:
             storage = EndpointDefaults()
         else:
             try:
-                storage = EndpointDefaults(**json.loads(un_storage))
+                storage = EndpointDefaults(**json.loads(un_storage))  # type: ignore
             except Exception as e:
                 print("Error loading token store", e)
                 storage = EndpointDefaults()
 
-        if token is None:
-            if endpoint.base_url in storage.default_token:
-                del storage.default_token[endpoint.base_url]
+        if endpoint.base_url in storage.default_token:
+            del storage.default_token[endpoint.base_url]
         else:
             storage.default_token[endpoint.base_url] = token
 
-        self.settings.setValue(self.save_key, storage.model_dump_json())
+        self.settings.setValue(self.save_key, storage.model_dump_json())  # type: ignore
 
     async def aget_default_token_for_endpoint(
         self, endpoint: FaktsEndpoint
@@ -78,11 +77,11 @@ class QTSettingTokenStore(BaseModel):
             The token for the endpoint, or None if there is no token
         """
 
-        un_storage = self.settings.value(self.save_key, None)
+        un_storage = self.settings.value(self.save_key, None)  # type: ignore
         if not un_storage:
             return None
         try:
-            storage = EndpointDefaults(**json.loads(un_storage))
+            storage = EndpointDefaults(**json.loads(un_storage))  # type: ignore
             if endpoint.base_url in storage.default_token:
                 return storage.default_token[endpoint.base_url]
         except Exception as e:

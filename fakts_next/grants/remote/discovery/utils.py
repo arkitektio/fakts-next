@@ -3,7 +3,7 @@ import aiohttp
 import logging
 import ssl
 from fakts_next.grants.remote.errors import DiscoveryError
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def check_wellknown(
     ) as session:
         async with session.get(
             url,
-            timeout=timeout,
+            timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
             if resp.status == 200:
                 data = await resp.json()
@@ -103,7 +103,7 @@ async def discover_url(
                 "No protocol specified and no auto protocols specified"
             )
 
-        errors = []
+        errors: list[Tuple[str, Exception]] = []
 
         for protocol in auto_protocols:
             logger.info(f"Trying to connect to {protocol}://{url}")

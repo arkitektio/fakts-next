@@ -11,7 +11,6 @@ except ImportError:
 
 
 from fakts_next.grants.base import BaseFaktsGrant
-from fakts_next.protocols import FaktsRequest
 from fakts_next.protocols import FaktValue
 from typing import Dict
 
@@ -33,7 +32,7 @@ class TomlGrant(BaseFaktsGrant):
 
     filepath: str
 
-    async def aload(self, request: FaktsRequest) -> Dict[str, FaktValue]:
+    async def aload(self) -> Dict[str, FaktValue]:
         """Loads the TOML file and returns the configuration.
 
         Parameters
@@ -47,6 +46,6 @@ class TomlGrant(BaseFaktsGrant):
             The configuration loaded from the TOML file.
         """
         with open(self.filepath, "r") as file:
-            config = toml.load(file)
+            config = toml.load(file)  # type: ignore
 
         return config

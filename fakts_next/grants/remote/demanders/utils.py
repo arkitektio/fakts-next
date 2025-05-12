@@ -1,6 +1,45 @@
 import logging
+from typing import List
+import socket
+import aiohttp
+
+from fakts_next.grants.remote.models import FaktsEndpoint
 
 logger = logging.getLogger(__name__)
+
+
+async def acheck_supported_layers(endpoint: FaktsEndpoint) -> List[str]:
+    supported_layers: list[str] = []
+
+    if endpoint.layers:
+        logger.debug(f"Checking supported layers for {endpoint.name}")
+        for layer in endpoint.layers:
+            print(f"Checking layer {layer}")
+            if layer.get_probe:
+                # check if we access to the web layer
+                async with aiohttp.ClientSession() as session:
+                    try:
+                        async with session.get(layer.get_probe) as response:
+                            await response.text()
+
+                    except Exception as e:
+                        logger.debug(f"Could not access web layer: {e}")
+                        continue
+
+            if layer.dns_probe:
+                # check if we access to the headscale layer
+                try:
+                    socket.gethostbyname(layer.dns_probe)
+                except Exception as e:
+                    print(f"Could not access headscale layer: {e}")
+                    logger.debug(f"Could not access headscale layer: {e}")
+                    continue
+
+            supported_layers.append(layer.identifier)
+
+    print("Supported layers", supported_layers)
+
+    return supported_layers
 
 
 def could_copy_to_clipboard(text: str) -> bool:
@@ -21,7 +60,7 @@ def could_copy_to_clipboard(text: str) -> bool:
     """
 
     try:
-        import pyperclip
+        import pyperclip  # type: ignore[import]
 
         pyperclip.copy(text)
         return True
@@ -31,7 +70,7 @@ def could_copy_to_clipboard(text: str) -> bool:
 
 
 try:
-    from rich import print
+    from rich import print as rprint
     from rich.panel import Panel
 
     def print_device_code_prompt(querystring: str, url: str, code: str) -> None:
@@ -53,7 +92,7 @@ try:
         """
 
         could_copy_to_clipboard(code)
-        print(
+        rprint(
             Panel.fit(
                 f"""
     Please visit the following URL:
@@ -73,7 +112,7 @@ try:
 
         This function prints the successful login message using rich.
         """
-        print(
+        rprint(
             Panel.fit(
                 "You have successfully logged in!",
                 title="Device Code Grant",

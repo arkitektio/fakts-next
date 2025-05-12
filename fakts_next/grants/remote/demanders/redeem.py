@@ -39,7 +39,7 @@ class RedeemDemander(BaseModel):
     """ The token with which to redeem the client"""
 
     retrieve_url: Optional[str] = Field(
-        None,
+        default=None,
         description="The url to use for retrieving the token (overwrited the endpoint url)",
     )
     """The url to use for retrieving the token (overwrited the endpoint url)"""
@@ -114,7 +114,7 @@ class RedeemDemander(BaseModel):
             The token that was refreshed
         """
 
-        return await self.ademand(endpoint, request)
+        return await self.ademand(endpoint)
 
     class Config:
         """Pydantic Config"""

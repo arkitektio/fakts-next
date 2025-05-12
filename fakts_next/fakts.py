@@ -1,7 +1,7 @@
 import asyncio
 import contextvars
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Type
 
 from koil.composition import KoiledModel
 from koil.helpers import unkoil
@@ -94,11 +94,7 @@ class Fakts(KoiledModel):
     _loaded: bool = False
     _lock: Optional[asyncio.Lock] = None
 
-    async def aget(
-        self,
-        group_name: Optional[str] = None,
-        **kwargs,
-    ) -> FaktValue:
+    async def aget(self, group_name: Optional[str] = None) -> FaktValue:
         """Get Fakt Value (async)
 
         Gets the currently active configuration for the group_name, by loading it from
@@ -120,9 +116,9 @@ class Fakts(KoiledModel):
         Returns:
             dict: The active fakts
         """
-        assert (
-            self._lock is not None
-        ), "You need to enter the context first before calling this function"
+        assert self._lock is not None, (
+            "You need to enter the context first before calling this function"
+        )
         async with self._lock:
             if not self.loaded_fakts:
                 try:
@@ -153,7 +149,7 @@ class Fakts(KoiledModel):
         return config
 
     def _getsubgroup(
-        self, group_name: Optional[str] = None, base: str = ""
+        self, group_name: Optional[str] = None, base: str | None = None
     ) -> Dict[str, Any]:
         """Get subgroup
 
@@ -168,12 +164,20 @@ class Fakts(KoiledModel):
         Returns:
             Dict[str, Any]: The subgroups configuration as a dictioniary
         """
+        if not self.loaded_fakts:
+            raise GroupNotFound(
+                f"Could't find {group_name} in fakts. No loaded fakts found"
+            )
+
+        if base is None:
+            base = ""
+
         config = {**self.loaded_fakts}
 
         if group_name is None:
             return config
 
-        path = []
+        path: list[str] = []
 
         for subgroup in group_name.split("."):
             try:
@@ -211,20 +215,19 @@ class Fakts(KoiledModel):
             not value or self._getsubgroup(group) != value
         )  # TODO: Implement Hashing on config?
 
-    async def arefresh(self, **kwargs) -> Dict[str, Any]:
+    async def arefresh(self) -> Dict[str, Any]:
         """Causes a Refresh, by reloading the grants"""
         self.loaded_fakts = {}
         await self.cache.areset()
         return await self.aload()
 
-    def refresh(self, **kwargs) -> Dict[str, Any]:
+    def refresh(self) -> Dict[str, Any]:
         """Causes a Refresh, by reloading the grants"""
-        return unkoil(self.arefresh, **kwargs)
+        return unkoil(self.arefresh)
 
     def get(
         self,
         group_name: Optional[str] = None,
-        **kwargs,
     ) -> FaktValue:
         """Get Fakt Value (Sync)
 
@@ -247,7 +250,7 @@ class Fakts(KoiledModel):
         Returns:
             dict: The active fakts
         """
-        return unkoil(self.aget, group_name=group_name, **kwargs)
+        return unkoil(self.aget, group_name=group_name)
 
     async def aload(self) -> Dict[str, FaktValue]:
         """Loads the configuration from the grant (async)
@@ -289,12 +292,6 @@ class Fakts(KoiledModel):
 
         return self.loaded_fakts
 
-    async def arefresh(self) -> Dict[str, FaktValue]:
-
-        self.loaded_fakts = None
-        await self.cache.areset()
-        return await self.aload()
-
     def load(self) -> Dict[str, FaktValue]:
         """Loads the configuration from the grant (sync)
 
@@ -331,7 +328,12 @@ class Fakts(KoiledModel):
         self._lock = asyncio.Lock()
         return self
 
-    async def __aexit__(self, *args, **kwargs) -> None:
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        traceback: Optional[Any],
+    ) -> None:
         """Exit the context manager and clean up"""
         current_fakts_next.set(
             None

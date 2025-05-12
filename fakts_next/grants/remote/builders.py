@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from fakts_next.grants.remote import RemoteGrant
 
 from fakts_next.grants.remote.claimers.static import StaticClaimer
@@ -34,10 +35,7 @@ def build_remote_testing(value: Dict[str, FaktValue]) -> RemoteGrant:
     )
 
 
-def build_redeem_grant(
-    url: str, manifest: Dict[str, FaktValue], redeem_token: str
-) -> RemoteGrant:
-
+def build_redeem_grant(url: str, manifest: BaseModel, redeem_token: str) -> RemoteGrant:
     return RemoteGrant(
         discovery=StaticDiscovery(endpoint=FaktsEndpoint(base_url=url)),
         claimer=ClaimEndpointClaimer(),

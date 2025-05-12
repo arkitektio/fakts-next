@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 import logging
 from fakts_next.grants.remote.errors import DemandError
-from fakts_next.grants.remote.models import FaktsEndpoint, FaktsRequest
+from fakts_next.grants.remote.models import FaktsEndpoint
 import ssl
 import certifi
 
@@ -43,7 +43,7 @@ class RetrieveDemander(BaseModel):
     )
     """The url to use for retrieving the token (overwrited the endpoint url)"""
 
-    async def ademand(self, endpoint: FaktsEndpoint, request: FaktsRequest) -> str:
+    async def ademand(self, endpoint: FaktsEndpoint) -> str:
         """Demand a token from the endpoint
 
         Parameters
@@ -94,7 +94,7 @@ class RetrieveDemander(BaseModel):
                         "Error! Coud not claim this app on this endpoint"
                     )
 
-    async def arefresh(self, endpoint: FaktsEndpoint, request: FaktsRequest) -> str:
+    async def arefresh(self, endpoint: FaktsEndpoint) -> str:
         """Refreshes the token for the given endpoint.
 
         This method will refresh the token for the given endpoint. This method will
@@ -114,4 +114,4 @@ class RetrieveDemander(BaseModel):
             The token that was refreshed
         """
 
-        return await self.ademand(endpoint, request)
+        return await self.ademand(endpoint)

@@ -1,4 +1,3 @@
-from typing import Any, Dict, Optional
 from fakts_next.fakts import Fakts
 from rath.links.httpx import HttpxLink
 from rath.operation import Operation
@@ -20,13 +19,10 @@ class FaktsHttpXLink(HttpxLink):
 
     """
 
-    endpoint_url: Optional[str]  # type: ignore
     fakts_group: str
     """The fakts group within the fakts context to use for configuration"""
     fakts: Fakts
     """ The fakts context to use for configuration"""
-
-    _old_fakt: Optional[Dict[str, Any]] = None
 
     def configure(self, fakt: FaltsHttpXConfig) -> None:
         """Configure the link with the given fakt"""
@@ -39,9 +35,8 @@ class FaktsHttpXLink(HttpxLink):
         and configure the link with it. Before connecting, it will check if the
         configuration has changed, and if so, it will reconfigure the link.
         """
-        if self.fakts.has_changed(self._old_fakt, self.fakts_group):
-            self._old_fakt = await self.fakts.aget(self.fakts_group)
-            assert self._old_fakt is not None, "Fakt should not be None"
-            self.configure(FaltsHttpXConfig(**self._old_fakt))
+        fakt = await self.fakts.aget(self.fakts_group)
+        assert isinstance(fakt, dict), "FaktsAIOHttpLink: fakts group is not a dict"
+        self.configure(FaltsHttpXConfig(**fakt))  # type: ignore
 
         return await super().aconnect(operation)

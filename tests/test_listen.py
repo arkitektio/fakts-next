@@ -13,7 +13,8 @@ async def listener():
         raise e
 
 
-@pytest.mark.asyncio    
+@pytest.mark.asyncio  
+@pytest.mark.netifaces  
 async def test_listener_cleanup():
     for i in range(10):
         task = asyncio.create_task(listener())

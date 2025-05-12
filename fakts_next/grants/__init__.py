@@ -1,4 +1,4 @@
-""" Fakts grants module.
+"""Fakts grants module.
 
 This module contains the grants that are included with
 the fakts_next package.
@@ -39,8 +39,6 @@ from .remote import RemoteGrant
 __all__ = [
     "EnvGrant",
     "GrantError",
-    "FaktsGrant",
-    "YamlGrant",
     "FailsafeGrant",
     "ParallelGrant",
     "RemoteGrant",

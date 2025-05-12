@@ -1,7 +1,6 @@
-from typing import Dict, AsyncGenerator, List, Tuple
-
+from typing import Dict, AsyncGenerator, List, Tuple, Set
 from pydantic import ConfigDict, Field, field_validator
-from socket import socket, AF_INET, SOCK_DGRAM, IPPROTO_UDP
+from socket import AF_INET, IPPROTO_UDP
 import asyncio
 import json
 import logging
@@ -14,11 +13,13 @@ from fakts_next.grants.remote.errors import DiscoveryError
 
 logger = logging.getLogger(__name__)
 
+DataGram = Tuple[bytes, Tuple[str, int]]
+
 
 class DiscoveryProtocol(asyncio.DatagramProtocol):
     "The protocol that is used to receive beacons, and put them in a queue"
 
-    def __init__(self, recvq: asyncio.Queue) -> None:
+    def __init__(self, recvq: asyncio.Queue[DataGram]) -> None:
         """Initialize the protocol
 
         Parameters
@@ -53,11 +54,10 @@ class ListenBinding(BaseModel):
     magic_phrase: str = "beacon-fakts_next"
 
     @field_validator("port")
-    def check_port(cls, v):
-        if not isinstance(v, int):
-            raise ValueError(f"Port {v} is not an integer")
+    def check_port(cls, v: int) -> int:
         if v < 0 or v > 65535:
             raise ValueError(f"Port {v} is not in the valid range")
+        return v
 
 
 class Beacon(BaseModel):
@@ -99,8 +99,8 @@ async def alisten(
 
     try:
         loop = asyncio.get_event_loop()
-        read_queue = asyncio.Queue()  # type: ignore
-        transport, pr = await loop.create_datagram_endpoint(
+        read_queue: asyncio.Queue[DataGram] = asyncio.Queue()  # type: ignore
+        transport, _ = await loop.create_datagram_endpoint(
             lambda: DiscoveryProtocol(read_queue),
             local_addr=(bind.address, bind.port),  # Change port number here
             family=AF_INET,
@@ -108,7 +108,7 @@ async def alisten(
         )
 
         while True:
-            data, addr = await read_queue.get()
+            data, _ = await read_queue.get()
             try:
                 data = str(data, "utf8")
                 if data.startswith(bind.magic_phrase):
@@ -174,7 +174,7 @@ async def alisten_pure(
         Any exception that is raised by the socket
     """
 
-    already_detected = set()
+    already_detected: Set[str] = set()
 
     async for x in alisten(bind, strict):
         if x.url not in already_detected:
