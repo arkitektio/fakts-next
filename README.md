@@ -79,5 +79,5 @@ Fakts provides the remote grant protocol for retrieval of configuration in dynam
 With these grants you provide a software manifest for a configuration server (fakts-server), that then grants
 the configuration (either through user approval (similar to device code grant)). These grants are mainly used
 to setup or claim an oauth2 application on the backend securely that then can be used to identify the application in the
-future. These grants are at the moment highly specific to the arkitekt platform and subject to change.
+future. 
 
