@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.2.2 (2025-05-12)
+
+### Bug Fixes
+
+- Add build
+  ([`f51efd4`](https://github.com/arkitektio/fakts-next/commit/f51efd4bf582856555923437f8b2c9b49c61f71c))
+
+
 ## v1.2.1 (2025-05-12)
 
 ### Bug Fixes
