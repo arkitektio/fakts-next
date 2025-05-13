@@ -8,7 +8,7 @@ readme = "README.md"
 license = "MIT"
 dependencies = [
     "pydantic>2",
-    "koil>=1.0.3",
+    "koil>=2.0.4",
     "certifi>=2025.4.26",
     "aiohttp>=3.11.18",
     "pyyaml>=6.0.2",
@@ -26,6 +26,7 @@ dev-dependencies = [
     "pytest-qt>=4.4.0",
     "pytest>=8.3.5",
     "python-semantic-release>=9.21.1",
+    "qtpy>=2.4.3",
 ]
 
 [tool.hatch.build.targets.sdist]

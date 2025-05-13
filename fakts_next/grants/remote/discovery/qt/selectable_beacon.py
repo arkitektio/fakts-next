@@ -6,7 +6,7 @@ from fakts_next.grants.remote.discovery.advertised import (
 from qtpy import QtWidgets, QtCore, QtGui
 import asyncio
 import logging
-from koil.qt import QtCoro, QtFuture, QtSignal
+from koil.qt import qt_to_async, QtFuture
 from fakts_next.grants.remote.discovery.utils import discover_url
 from pydantic import BaseModel, ConfigDict
 from typing import Any, Optional
@@ -88,7 +88,7 @@ class FaktsEndpointButton(QtWidgets.QPushButton):  # type: ignore
         super(FaktsEndpointButton, self).paintEvent(a0)
 
         painter = QtGui.QPainter(self)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing) # type: ignore
 
         # Calculate the position for the title and subtitle
         title_pos_y = int(self.rect().height() / 3)
@@ -162,12 +162,12 @@ class SelectBeaconWidget(QtWidgets.QDialog):  # type: ignore
         **kwargs,  # type: ignore
     ) -> None:
         """Constructor for SelectBeaconWidget"""
-        super().__init__(*args, **kwargs)  # type: ignore
-        self.setWindowTitle("Search Endpoints...")  # type: ignore
-        self.hide_coro = QtCoro(self.hide, autoresolve=True)  # type: ignore
-        self.show_error_coro = QtCoro(self.show_error, autoresolve=True)  # type: ignore
-        self.clear_endpoints_coro = QtCoro(self.clear_endpoints, autoresolve=True)
-        self.select_endpoint = QtCoro(self.demand_selection_of_endpoint)  # type: ignore
+        super().__init__(*args, **kwargs) # type: ignore
+        self.setWindowTitle("Search Endpoints...")  
+        self.hide_coro = qt_to_async(self.hide_callback)  
+        self.show_error_coro = qt_to_async(self.show_error) 
+        self.clear_endpoints_coro = qt_to_async(self.clear_endpoints)
+        self.select_endpoint = qt_to_async(self.demand_selection_of_endpoint)  # type: ignore
         self.settings = settings  # type: ignore
 
         self.select_endpoint_future = None
@@ -182,10 +182,9 @@ class SelectBeaconWidget(QtWidgets.QDialog):  # type: ignore
         self.endpointLayout = QtWidgets.QVBoxLayout()
 
         self.scanWidget = SelfScanWidget()
-        self.beacon_user = QtSignal(self.scanWidget.user_beacon_added)  # type: ignore
 
-        QBtn = QtWidgets.QDialogButtonBox.Cancel
-        self.buttonBox = QtWidgets.QDialogButtonBox(QBtn)
+        QBtn = QtWidgets.QDialogButtonBox.Cancel # type: ignore
+        self.buttonBox = QtWidgets.QDialogButtonBox(QBtn)  # type: ignore
         self.buttonBox.rejected.connect(self.on_reject)
 
         endgroup = QtWidgets.QGroupBox("Select")
@@ -202,6 +201,10 @@ class SelectBeaconWidget(QtWidgets.QDialog):  # type: ignore
         self.wlayout.addWidget(scangroup)
         self.wlayout.addWidget(self.buttonBox)
         self.setLayout(self.wlayout)  # type: ignore
+        
+    def hide_callback(self, future: QtFuture[bool]) -> None:  # type: ignore
+        self.hide()
+        future.resolve(True)  # type: ignore
 
     def clearLayout(self, layout: QtWidgets.QVBoxLayout) -> None:
         """Clear the layout"""
@@ -214,16 +217,17 @@ class SelectBeaconWidget(QtWidgets.QDialog):  # type: ignore
             if widget is not None:
                 widget.deleteLater()
 
-    def clear_endpoints(self) -> None:
+    def clear_endpoints(self, future: QtFuture[bool]) -> None:
         """Clear the endpoints"""
         self.clearLayout(self.endpointLayout)
         self.endpoints = []
+        future.resolve(True)  # type: ignore
 
     def show_me(self) -> None:
         """A function that shows the widget"""
         self.show()  # type: ignore
 
-    def show_error(self, error: Exception) -> None:
+    def show_error(self, future: QtFuture[None], error: Exception) -> None:
         """Show an error message
 
         Parameters
@@ -233,6 +237,7 @@ class SelectBeaconWidget(QtWidgets.QDialog):  # type: ignore
         """
         self.show()  # type: ignore
         QtWidgets.QMessageBox.critical(self, "Error", str(error))
+        future.resolve(None)  # type: ignore
 
     def demand_selection_of_endpoint(self, future: QtFuture) -> None:  # type: ignore
         """Is called when the user should select an endpoint. I.e. when the demander
@@ -336,7 +341,7 @@ class QtSelectableDiscovery(BaseModel):
         description="The timeout for the connection",
     )
     additional_beacons: List[str] = Field(default_factory=lambda: ["localhost:11000", "localhost:11001", "localhost:8000"])
-    widget: SelectBeaconWidget
+    widget: SelectBeaconWidget 
 
     async def emit_endpoints(self) -> None:
         """A long running task that will emit endpoints that are discovered
@@ -431,7 +436,7 @@ class QtSelectableDiscovery(BaseModel):
 
         emitting_task = asyncio.create_task(self.emit_endpoints())
         try:
-            await self.widget.clear_endpoints_coro.acall()  # type: ignore
+            await self.widget.clear_endpoints_coro.acall()  
 
             try:
                 select_endpoint_task = asyncio.create_task(  # type: ignore

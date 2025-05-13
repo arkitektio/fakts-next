@@ -291,13 +291,14 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-qt" },
     { name = "python-semantic-release" },
+    { name = "qtpy" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.11.18" },
     { name = "certifi", specifier = ">=2025.4.26" },
-    { name = "koil", specifier = ">=1.0.3" },
+    { name = "koil", specifier = ">=2.0.4" },
     { name = "pydantic", specifier = ">2" },
     { name = "pyyaml", specifier = ">=6.0.2" },
 ]
@@ -310,6 +311,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=6.1.1" },
     { name = "pytest-qt", specifier = ">=4.4.0" },
     { name = "python-semantic-release", specifier = ">=9.21.1" },
+    { name = "qtpy", specifier = ">=2.4.3" },
 ]
 
 [[package]]
@@ -463,15 +465,15 @@ wheels = [
 
 [[package]]
 name = "koil"
-version = "1.0.3"
+version = "2.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "janus" },
-    { name = "qtpy" },
+    { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7c/30/46e640c066d6142ad574b08b721f80ced38556334e250da3e5bae3781d06/koil-1.0.3.tar.gz", hash = "sha256:71ed76c85a612b16b5cdee27cd1c1ab813f691628c05a44f7e5f1942845280e2", size = 20948 }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/65/66a1e16e6565bcbf168d09c9275e2672c96cb0b8195dc8ba2d730c9fdd7e/koil-2.0.4.tar.gz", hash = "sha256:862a4d4e1ccccb29576f8a6a1e30c9f955b5549efb37b3747d48a0718736320a", size = 15677 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1b/62/1231afc7444bf9231d73074a0e79794e0bc72e5d1c6d74f774016baf0d03/koil-1.0.3-py3-none-any.whl", hash = "sha256:04858f0a29ec4422c9a0bbd1ed463282f876a767696f344f79d5ce400606d246", size = 23519 },
+    { url = "https://files.pythonhosted.org/packages/42/ab/81bae99a8523476642f6bed8283d71068eec3f83d730fcab4272deb94391/koil-2.0.4-py3-none-any.whl", hash = "sha256:a1cf12471446a8f95966269bec0ba1410f350fbd4709575643328b49dfa778b6", size = 19241 },
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 from pydantic import ConfigDict, Field
 from fakts_next.grants.errors import GrantError
 import yaml
-from koil.qt import QtCoro, QtFuture
+from koil.qt import qt_to_async, QtFuture
 from qtpy import QtWidgets
 from fakts_next.protocols import FaktValue
 from typing import Dict, Protocol, runtime_checkable, Optional, Type
@@ -71,7 +71,7 @@ class WrappingWidget(QtWidgets.QWidget):  # type: ignore
     def __init__(self, *args, **kwargs) -> None:  # type: ignore
         """A Widget that wraps the file selection process."""
         super().__init__(*args, **kwargs)  # type: ignore
-        self.get_file_coro = QtCoro(self.open_file)  # type: ignore
+        self.get_file_coro = qt_to_async(self.open_file)  # type: ignore
 
     def open_file(self, future: QtFuture[str]) -> None:  # type: ignore
         """

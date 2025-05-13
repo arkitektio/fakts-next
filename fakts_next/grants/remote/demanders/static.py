@@ -20,7 +20,7 @@ class StaticDemander(BaseModel):
 
     """
 
-    token: SecretStr
+    token: str
     """ The token (secret) that uniquely identifies this application on the fakts_next server."""
 
     async def ademand(self, endpoint: FaktsEndpoint) -> str:
@@ -41,4 +41,4 @@ class StaticDemander(BaseModel):
         str
             The token that was retrieved
         """
-        return self.token.get_secret_value()
+        return self.token

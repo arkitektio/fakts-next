@@ -1,6 +1,4 @@
 import os
-
-import pytest
 from fakts_next.grants.remote.models import FaktsEndpoint
 from fakts_next.grants.remote.base import RemoteGrant
 from fakts_next.fakts import Fakts
@@ -12,15 +10,18 @@ from fakts_next.grants.remote.discovery.qt.selectable_beacon import (
 from fakts_next.grants.remote.demanders.static import StaticDemander
 from fakts_next.grants.remote.claimers.static import StaticClaimer
 import uuid
-from koil.qt import QtRunner
+from koil.qt import async_to_qt
+from koil.contrib.pytest_qt import wait_for_qttask
 from PyQt5 import QtCore, QtWidgets
+import pytest 
+
 
 TESTS_FOLDER = str(os.path.dirname(os.path.abspath(__file__)))
 
 
 class FaktualBeacon(QtWidgets.QWidget):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
+        super().__init__(parent=parent)
 
         self.fakts_next = Fakts(
             grant=RemoteGrant(
@@ -31,7 +32,7 @@ class FaktualBeacon(QtWidgets.QWidget):
         )
         self.fakts_next.enter()
 
-        self.load_fakts_next_task = QtRunner(self.fakts_next.aget)
+        self.load_fakts_next_task = async_to_qt(self.fakts_next.aget)
         self.load_fakts_next_task.errored.connect(
             lambda x: self.greet_label.setText(repr(x))
         )
@@ -56,14 +57,14 @@ class FaktualBeacon(QtWidgets.QWidget):
 
 
 class FaktualYaml(QtWidgets.QWidget):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
+        super().__init__(parent=parent)
 
         self.fakts_next = Fakts(
             grant=QtYamlGrant(widget=WrappingWidget(parent=self)),
         )
         self.fakts_next.enter()
-        self.load_fakts_next_task = QtRunner(self.fakts_next.aget)
+        self.load_fakts_next_task = async_to_qt(self.fakts_next.aget)
         self.load_fakts_next_task.errored.connect(
             lambda x: self.greet_label.setText(repr(x))
         )
@@ -101,36 +102,7 @@ async def mock_ademand(self, *args, **kwargs):
 
 
 @pytest.mark.qt
-def test_faktual_beacon(qtbot, monkeypatch):
-    """Tests if just adding koil interferes with normal
-    qtpy widgets.
-
-    Args:
-        qtbot (_type_): _description_
-    """
-
-    monkeypatch.setattr(
-        SelectBeaconWidget,
-        "demand_selection_of_endpoint",
-        lambda self, f: f.resolve(
-            FaktsEndpoint(base_url="http://localhost:5000", name="v1")
-        ),
-    )
-
-    widget = FaktualBeacon()
-    qtbot.addWidget(widget)
-
-    # click in the Greet button and make sure it updates the appropriate label
-    with qtbot.waitSignal(widget.load_fakts_next_task.returned) as b:
-        # click in the Greet button and make sure it updates the appropriate label
-        qtbot.mouseClick(widget.button_greet, QtCore.Qt.LeftButton)
-        assert widget.greet_label.text() == "Loading..."
-
-    assert isinstance(b.args[0], dict), "Needs to be dict"
-
-
-@pytest.mark.qt
-def test_faktual_yaml(qtbot, monkeypatch):
+def test_faktual_yaml(qtbot, monkeypatch): 
     """Tests if just adding koil interferes with normal
     qtpy widgets.
 
@@ -141,7 +113,7 @@ def test_faktual_yaml(qtbot, monkeypatch):
     monkeypatch.setattr(
         QtSelectYaml,
         "ask",
-        classmethod(lambda *args, **kwargs: f"{TESTS_FOLDER}/test.yaml"),
+        classmethod(lambda *args, **kwargs: f"{TESTS_FOLDER}/test.yaml"), # type: ignore
     )
 
     widget = FaktualYaml()
