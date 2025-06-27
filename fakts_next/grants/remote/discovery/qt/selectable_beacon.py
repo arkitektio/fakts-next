@@ -34,7 +34,7 @@ class SelfScanWidget(QtWidgets.QWidget):  # type: ignore
 
     """
 
-    user_beacon_added = QtCore.Signal(Beacon)
+    user_beacon_added = QtCore.Signal(Beacon)  # type: ignore
     """Signal that is emitted when a new beacon is added"""
 
     def __init__(self, *args, **kwargs) -> None:  # type: ignore
@@ -65,7 +65,9 @@ class FaktsEndpointButton(QtWidgets.QPushButton):  # type: ignore
 
     accept_clicked = QtCore.Signal(FaktsEndpoint)  # type: ignore
 
-    def __init__(self, endpoint: FaktsEndpoint, parent: Optional[QtWidgets.QWidget] = None) -> None:
+    def __init__(
+        self, endpoint: FaktsEndpoint, parent: Optional[QtWidgets.QWidget] = None
+    ) -> None:
         """Constructor for FaktsEndpointButton"""
         super(FaktsEndpointButton, self).__init__(parent)  # type: ignore
         self.endpoint = endpoint
@@ -88,7 +90,7 @@ class FaktsEndpointButton(QtWidgets.QPushButton):  # type: ignore
         super(FaktsEndpointButton, self).paintEvent(a0)
 
         painter = QtGui.QPainter(self)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing) # type: ignore
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)  # type: ignore
 
         # Calculate the position for the title and subtitle
         title_pos_y = int(self.rect().height() / 3)
@@ -162,10 +164,10 @@ class SelectBeaconWidget(QtWidgets.QDialog):  # type: ignore
         **kwargs,  # type: ignore
     ) -> None:
         """Constructor for SelectBeaconWidget"""
-        super().__init__(*args, **kwargs) # type: ignore
-        self.setWindowTitle("Search Endpoints...")  
-        self.hide_coro = qt_to_async(self.hide_callback)  
-        self.show_error_coro = qt_to_async(self.show_error) 
+        super().__init__(*args, **kwargs)  # type: ignore
+        self.setWindowTitle("Search Endpoints...")
+        self.hide_coro = qt_to_async(self.hide_callback)
+        self.show_error_coro = qt_to_async(self.show_error)
         self.clear_endpoints_coro = qt_to_async(self.clear_endpoints)
         self.select_endpoint = qt_to_async(self.demand_selection_of_endpoint)  # type: ignore
         self.settings = settings  # type: ignore
@@ -183,7 +185,7 @@ class SelectBeaconWidget(QtWidgets.QDialog):  # type: ignore
 
         self.scanWidget = SelfScanWidget()
 
-        QBtn = QtWidgets.QDialogButtonBox.Cancel # type: ignore
+        QBtn = QtWidgets.QDialogButtonBox.Cancel  # type: ignore
         self.buttonBox = QtWidgets.QDialogButtonBox(QBtn)  # type: ignore
         self.buttonBox.rejected.connect(self.on_reject)
 
@@ -201,7 +203,7 @@ class SelectBeaconWidget(QtWidgets.QDialog):  # type: ignore
         self.wlayout.addWidget(scangroup)
         self.wlayout.addWidget(self.buttonBox)
         self.setLayout(self.wlayout)  # type: ignore
-        
+
     def hide_callback(self, future: QtFuture[bool]) -> None:  # type: ignore
         self.hide()
         future.resolve(True)  # type: ignore
@@ -340,8 +342,10 @@ class QtSelectableDiscovery(BaseModel):
         default=3,
         description="The timeout for the connection",
     )
-    additional_beacons: List[str] = Field(default_factory=lambda: ["localhost:11000", "localhost:11001", "localhost:8000"])
-    widget: SelectBeaconWidget 
+    additional_beacons: List[str] = Field(
+        default_factory=lambda: ["localhost:11000", "localhost:11001", "localhost:8000"]
+    )
+    widget: SelectBeaconWidget
 
     async def emit_endpoints(self) -> None:
         """A long running task that will emit endpoints that are discovered
@@ -436,7 +440,7 @@ class QtSelectableDiscovery(BaseModel):
 
         emitting_task = asyncio.create_task(self.emit_endpoints())
         try:
-            await self.widget.clear_endpoints_coro.acall()  
+            await self.widget.clear_endpoints_coro.acall()
 
             try:
                 select_endpoint_task = asyncio.create_task(  # type: ignore
@@ -444,7 +448,9 @@ class QtSelectableDiscovery(BaseModel):
                 )
                 user_definition_task = asyncio.create_task(self.await_user_definition())
 
-                endpoint: FaktsEndpoint = await wait_first(select_endpoint_task, user_definition_task)
+                endpoint: FaktsEndpoint = await wait_first(
+                    select_endpoint_task, user_definition_task
+                )
 
                 await self.widget.hide_coro.acall()  # type: ignore
 

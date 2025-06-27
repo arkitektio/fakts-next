@@ -9,6 +9,14 @@ from typing import Optional
 from fakts_next.errors import GroupNotFound, NoFaktsFound
 from fakts_next.cache.nocache import NoCache
 from .protocols import FaktsCache, FaktValue, FaktsGrant
+from .models import ActiveFakts, Alias, Manifest
+from oauthlib.oauth2.rfc6749.clients.backend_application import BackendApplicationClient
+import aiohttp
+from oauthlib.common import urldecode
+import ssl
+import certifi
+from ssl import SSLContext
+
 
 logger = logging.getLogger(__name__)
 current_fakts_next: contextvars.ContextVar[Optional["Fakts"]] = contextvars.ContextVar("current_fakts_next", default=None)
@@ -67,14 +75,25 @@ class Fakts(KoiledModel):
     """
 
     cache: FaktsCache = Field(default_factory=NoCache, exclude=True)
+
+    """" Requirmements """
+    manifest: Manifest
+
+    """"The manifest of the fakts. This is used to describe the fakts and its capabilities."""
+    ssl_context: SSLContext = Field(default_factory=lambda: ssl.create_default_context(cafile=certifi.where()))
+
     grant: FaktsGrant
     """The grant to load the configuration from"""
 
-    hard_fakts: Dict[str, Any] = Field(default_factory=dict, exclude=True)
+    hard_fakts: ActiveFakts | None = Field(default=None, exclude=True)
     """Hard fakts are fakts that are set by the user and cannot be overwritten by grants"""
 
-    loaded_fakts: Optional[Dict[str, Any]] = Field(default=None, exclude=True)
+    loaded_fakts: ActiveFakts | None = Field(default=None, exclude=True)
     """The currently loaded fakts. Please use `get` to access the fakts"""
+
+    alias_map: Dict[str, Alias] = Field(default_factory=dict, exclude=True, description="Map of service names to active aliases")
+
+    loaded_token: Optional[str] = Field(default=None, exclude=True, description="The currently loaded token")
 
     allow_auto_load: bool = Field(default=True, description="Should we autoload on get?")
     """Should we autoload the grants on a call to get?"""
@@ -88,8 +107,168 @@ class Fakts(KoiledModel):
 
     _loaded: bool = False
     _lock: Optional[asyncio.Lock] = None
+    _token_lock: Optional[asyncio.Lock] = None
+    _alias_lock: Optional[asyncio.Lock] = None
 
-    async def aget(self, group_name: Optional[str] = None) -> FaktValue:
+    async def arefresh_token(self) -> str:
+        """Refresh the authentication token for a service (async)"""
+        """Get Authentikation Token for a service (async)"""
+        assert self._lock is not None, "You need to enter the context first before calling this function"
+        async with self._lock:
+            if not self.loaded_fakts:
+                try:
+                    await self.aload()
+                except Exception as e:
+                    logger.error(e, exc_info=True)
+                    raise e
+
+        assert self.loaded_fakts, "No fakts loaded yet. Please call load() first."
+
+        scope = " ".join(self.loaded_fakts.auth.scopes)
+
+        auth_client = BackendApplicationClient(
+            client_id=self.loaded_fakts.auth.client_id,
+            scope=scope,
+        )
+
+        token_url = self.loaded_fakts.auth.token_url
+
+        body = auth_client.prepare_request_body(
+            client_secret=self.loaded_fakts.auth.client_secret,
+            client_id=self.loaded_fakts.auth.client_id,
+        )
+
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        }
+
+        data = dict(urldecode(body))
+
+        print("Challening for token with data:", data, token_url)
+
+        # Create an OAuth2 session for the OSF
+        async with aiohttp.ClientSession(
+            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
+            headers=headers,
+        ) as session:
+            async with session.post(
+                token_url,
+                data=data,
+                auth=aiohttp.BasicAuth(
+                    self.loaded_fakts.auth.client_id,
+                    self.loaded_fakts.auth.client_secret,
+                ),
+            ) as resp:
+                text = await resp.text()
+
+                auth_client.parse_request_body_response(text, scope=scope)
+
+                token = auth_client.token
+                self.loaded_token = str(token["access_token"])
+                return str(token["access_token"])
+
+    async def achallenge_alias(self, alias: Alias) -> bool:
+        async with aiohttp.ClientSession(
+            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            },
+        ) as session:
+            async with session.get(
+                alias.challenge_path,
+            ) as resp:
+                # Check status code
+                if resp.status != 200:
+                    logger.error(f"Failed to challenge alias {alias} with status code {resp.status}")
+                    return False
+                else:
+                    return True
+
+        return False
+
+    async def aget_token(self) -> str:
+        """Refresh the authentication token for a service (async)"""
+        """Get Authentikation Token for a service (async)"""
+        assert self._token_lock is not None, "You need to enter the context first before calling this function"
+        async with self._token_lock:
+            if not self.loaded_token:
+                try:
+                    await self.arefresh_token()
+                except Exception as e:
+                    logger.error(e, exc_info=True)
+                    raise e
+
+        assert self.loaded_token, "No token loaded yet. Please call load() first."
+        return self.loaded_token
+
+    async def aload(self) -> ActiveFakts:
+        """Load the fakts from the grant (async)
+
+        This method will load the fakts from the grant, and set the loaded_fakts
+        attribute to the loaded fakts. If the fakts are already loaded, it will
+        return the loaded fakts.
+
+        Returns:
+            ActiveFakts: The loaded fakts
+        """
+        self.loaded_fakts = await self.grant.aload()
+        return self.loaded_fakts
+
+    async def arefresh_alias(
+        self,
+        service_name: Optional[str] = None,
+        omit_challenge: bool = False,
+        cache: bool = True,
+        store: bool = True,
+    ) -> Alias:
+        """Refresh the alias for a service (async)
+
+        This method will refresh the alias for a service, by calling the challenge path
+        of the alias. If the challenge fails, it will raise an exception.
+
+        Args:
+            service_name (str): The name of the service to refresh the alias for
+            cache (bool, optional): Should we cache the alias? Defaults to True.
+            store (bool, optional): Should we store the alias in the cache? Defaults to True.
+
+        Returns:
+            Alias: The refreshed alias
+        """
+        assert self._lock is not None, "You need to enter the context first before calling this function"
+        async with self._lock:
+            if not self.loaded_fakts:
+                try:
+                    await self.aload()
+                except Exception as e:
+                    logger.error(e, exc_info=True)
+                    raise e
+
+        assert self.loaded_fakts, "No fakts loaded yet. Please call load() first."
+        assert service_name in self.loaded_fakts.instances, f"Service {service_name} not found in loaded fakts. Available services: {', '.join(self.loaded_fakts.instances.keys())}"
+
+        service_instance = self.loaded_fakts.instances[service_name]
+
+        for alias in service_instance.aliases:
+            if omit_challenge:
+                # If we omit the challenge, we just return the alias
+                self.alias_map[service_name] = alias
+                return alias
+            challenge_ok = await self.achallenge_alias(alias)
+            if challenge_ok:
+                self.alias_map[service_name] = alias
+                return alias
+
+        raise GroupNotFound(f"Could not find a valid alias for service {service_name}. Available aliases: {', '.join([str(alias.challenge_path) for alias in service_instance.aliases])} all failed to challenge.")
+
+    async def aget_alias(
+        self,
+        fakts_key: Optional[str] = None,
+        omit_challenge: bool = False,
+        cache: bool = True,
+        store: bool = True,
+    ) -> Alias:
         """Get Fakt Value (async)
 
         Gets the currently active configuration for the group_name, by loading it from
@@ -111,106 +290,27 @@ class Fakts(KoiledModel):
         Returns:
             dict: The active fakts
         """
-        assert self._lock is not None, "You need to enter the context first before calling this function"
-        async with self._lock:
-            if not self.loaded_fakts:
+        assert self._alias_lock is not None, "You need to enter the context first before calling this function"
+        async with self._alias_lock:
+            if fakts_key not in self.alias_map:
+                # If we don't have the alias in the map, we need to refresh it
                 try:
-                    await self.aload()
-                except Exception as e:
-                    logger.error(e, exc_info=True)
-                    raise e
-
-        try:
-            config = self._getsubgroup(group_name, base=group_name)
-        except GroupNotFound as e:
-            if self.refetch_on_group_not_found:
-                try:
-                    await self.arefresh()
-                except Exception as e:
-                    logger.error(e, exc_info=True)
-                    raise e
-
-                try:
-                    config = self._getsubgroup(group_name, base=group_name)
+                    await self.arefresh_alias(fakts_key, omit_challenge=omit_challenge)
                 except GroupNotFound as e:
-                    raise GroupNotFound(f"Could't find {group_name} in fakts. Even after refresh") from e
-            else:
-                raise e
+                    logger.error(e, exc_info=True)
+                    raise e
 
-        return config
+        assert fakts_key in self.alias_map, f"Alias for key {fakts_key} not found in alias map. Available aliases: {', '.join(self.alias_map.keys())}"
+        return self.alias_map[fakts_key]
 
-    def _getsubgroup(self, group_name: Optional[str] = None, base: str | None = None) -> Dict[str, Any]:
-        """Get subgroup
-
-        Protected function to get a subgroup from the loaded fakts
-
-        Args:
-            group_name (str): The name of the group
-
-        Raises:
-            GroupNotFound: If the groups is not found in the loadedfakts
-
-        Returns:
-            Dict[str, Any]: The subgroups configuration as a dictioniary
-        """
-        if not self.loaded_fakts:
-            raise GroupNotFound(f"Could't find {group_name} in fakts. No loaded fakts found")
-
-        if base is None:
-            base = ""
-
-        config = {**self.loaded_fakts}
-
-        if group_name is None:
-            return config
-
-        path: list[str] = []
-
-        for subgroup in group_name.split("."):
-            try:
-                path += [subgroup]
-                config = config[subgroup]
-            except KeyError as e:
-                raise GroupNotFound(f"Could't find {subgroup} in subgroup when trying to access '" + " > ".join(path) + f"'. Available keys in this config are {', '.join(list(config.keys()))}") from e
-
-        return config
-
-    def has_changed(self, value: FaktValue, group: str) -> bool:
-        """Has Changed
-
-        Checks if the value has changed since the last load.
-
-
-        Parameters
-        ----------
-        value: FaktValue
-            The value to check
-        group : str
-            The group it belongs to
-
-        Returns
-        -------
-        bool
-            True if the value has changed, False otherwise
-        """
-
-        return not value or self._getsubgroup(group) != value  # TODO: Implement Hashing on config?
-
-    async def arefresh(self) -> Dict[str, Any]:
-        """Causes a Refresh, by reloading the grants"""
-        self.loaded_fakts = {}
-        await self.cache.areset()
-        return await self.aload()
-
-    def refresh(self) -> Dict[str, Any]:
-        """Causes a Refresh, by reloading the grants"""
-        return unkoil(self.arefresh)
-
-    def get(
+    def get_alias(
         self,
-        group_name: Optional[str] = None,
-    ) -> FaktValue:
-        """Get Fakt Value (Sync)
+        fakts_key: Optional[str] = None,
+        cache: bool = True,
+        omit_challenge: bool = False,
+        store: bool = True,
+    ) -> Alias:
+        """Get Fakt Value (sync)
 
         Gets the currently active configuration for the group_name, by loading it from
         the grant if it is not already loaded.
@@ -231,69 +331,18 @@ class Fakts(KoiledModel):
         Returns:
             dict: The active fakts
         """
-        return unkoil(self.aget, group_name=group_name)
+        return unkoil(self.aget_alias, fakts_key, cache=cache, store=store, omit_challenge=omit_challenge)
 
-    async def aload(self) -> Dict[str, FaktValue]:
-        """Loads the configuration from the grant (async)
+    def get_token(self) -> str:
+        """Get Authentikation Token for a service (sync)
 
-        This method will load the configuration from the grant, and set it as the
-        the currently active configuration. It is called automatically on a call to
-        `get` if the configuration has not been loaded yet.
+        This method will return the currently loaded token, or refresh it if it is not
+        loaded yet. It will raise an exception if the token could not be loaded.
 
-        In contrary to `refresh`, a potential cached configuration can be used, if
-
-
-        Parameters
-        ----------
-        request : FaktsRequest
-            The request that is being processed.
-
-        Returns
-        -------
-
-        Dict[str, FaktValue]
-           The loaded fakts
-
-
+        Returns:
+            str: The currently loaded token
         """
-        try:
-            self.loaded_fakts = await self.cache.aload()
-        except Exception as e:
-            logger.error(e, exc_info=True)
-            raise e
-
-        # Cache is empty, we need to reload the grants
-        if not self.loaded_fakts:
-            try:
-                self.loaded_fakts = await self.grant.aload()
-                await self.cache.aset(self.loaded_fakts)
-            except Exception as e:
-                logger.error(e, exc_info=True)
-                raise e
-
-        return self.loaded_fakts
-
-    def load(self) -> Dict[str, FaktValue]:
-        """Loads the configuration from the grant (sync)
-
-        This method will load the configuration from the grant, and set it as the
-        the currently active configuration. It is called automatically on a call to
-        `get` if the configuration has not been loaded yet.
-
-        Parameters
-        ----------
-        request : FaktsRequest
-            The request that is being processed.
-
-        Returns
-        -------
-
-        Dict[str, FaktValue]
-           The loaded fakts
-
-
-        """
-        return unkoil(self.aload)
+        return unkoil(self.aget_token)
 
     async def __aenter__(self) -> "Fakts":
         """Enter the context manager
@@ -305,6 +354,8 @@ class Fakts(KoiledModel):
 
         current_fakts_next.set(self)  # TODO: We should set tokens, but depending on async/sync this is shit
         self._lock = asyncio.Lock()
+        self._token_lock = asyncio.Lock()
+        self._alias_lock = asyncio.Lock()
         return self
 
     async def __aexit__(

@@ -7,6 +7,8 @@ from fakts_next.grants.remote.errors import ClaimError
 from fakts_next.grants.remote.models import FaktsEndpoint, FaktValue
 from pydantic import BaseModel
 
+from fakts_next.models import ActiveFakts
+
 
 class ClaimEndpointClaimer(BaseModel):
     """A claimer that claims the configuration from the endpoint
@@ -30,7 +32,7 @@ class ClaimEndpointClaimer(BaseModel):
         self,
         token: str,
         endpoint: FaktsEndpoint,
-    ) -> Dict[str, FaktValue]:
+    ) -> ActiveFakts:
         """Claims the configuration from the endpoint
 
         Parameters
@@ -53,9 +55,7 @@ class ClaimEndpointClaimer(BaseModel):
             An error occured while claiming the configuration
         """
 
-        async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(ssl=self.ssl_context)
-        ) as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context)) as session:
             async with session.post(
                 f"{endpoint.base_url}claim/",
                 json={
@@ -74,7 +74,7 @@ class ClaimEndpointClaimer(BaseModel):
                     if status == "error":
                         raise ClaimError(data["message"])
                     if status == "granted":
-                        return data["config"]
+                        return ActiveFakts(**data["config"])
                     if status == "denied":
                         raise ClaimError("Access denied")
 

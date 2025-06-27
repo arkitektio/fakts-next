@@ -5,6 +5,7 @@ import datetime
 import logging
 import json
 from fakts_next.protocols import FaktValue
+from fakts_next.models import ActiveFakts
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 class CacheFile(pydantic.BaseModel):
     """Cache file model"""
 
-    config: Dict[str, Any]
+    fakts: ActiveFakts
     created: datetime.datetime
     hash: str = ""
 
@@ -63,7 +64,7 @@ class FileCache(pydantic.BaseModel):
     expires_in: Optional[int] = None
     """When should the cache expire"""
 
-    async def aload(self) -> Optional[Dict[str, FaktValue]]:
+    async def aload(self) -> Optional[ActiveFakts]:
         """Loads the configuration from the grant
 
         It will try to load the configuration from the cache file.
@@ -107,9 +108,9 @@ class FileCache(pydantic.BaseModel):
                 if cache is None:
                     return None
 
-                return cache.config
+                return cache.fakts
 
-    async def aset(self, value: Dict[str, FaktValue]):
+    async def aset(self, value: ActiveFakts):
         """Refreshes the configuration from the grant
 
         This function is used to refresh the configuration from the grant.
@@ -119,7 +120,7 @@ class FileCache(pydantic.BaseModel):
         The request object is used to pass information
         """
 
-        cache = CacheFile(config=value, created=datetime.datetime.now(), hash=self.hash)
+        cache = CacheFile(fakts=value, created=datetime.datetime.now(), hash=self.hash)
 
         with open(self.cache_file, "w+") as f:
             json.dump(json.loads(cache.model_dump_json()), f)

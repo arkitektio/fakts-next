@@ -1,8 +1,14 @@
 from typing import Dict, Any
 from pydantic import BaseModel
 
-class HardFakts(BaseModel):
-    fakts: Dict[str, Any]
+from fakts_next.models import ActiveFakts
 
-    async def aload(self) -> Dict[str, Any]:
+
+class HardFaktsGrant(BaseModel):
+    """Hardcoded Fakts Grant"""
+
+    fakts: ActiveFakts
+
+    async def aload(self) -> ActiveFakts:
+        """Loads the configuration from the hardcoded fakts"""
         return self.fakts

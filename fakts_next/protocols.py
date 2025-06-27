@@ -1,7 +1,11 @@
-from typing import Dict, Any, Optional, Union, Protocol, runtime_checkable
+from typing import Dict, Any, Union, Protocol, runtime_checkable
+
+from fakts_next.models import ActiveFakts
 
 
 NestedFaktValue = Union[str, int, float, bool, None, Dict[str, Any], list[Any]]
+
+
 FaktValue = Union[str, int, float, bool, None, Dict[str, NestedFaktValue], list[NestedFaktValue]]
 
 
@@ -9,12 +13,12 @@ FaktValue = Union[str, int, float, bool, None, Dict[str, NestedFaktValue], list[
 class FaktsGrant(Protocol):
     """FaktsGrant
 
-    A FaktsGrant is a grant that can be used to load configuration
+    A FaktsGrant is a grant that can be used to load service configuration
     from a specific source. It can be used to load configuration
     from a file, from a remote endpoint, from a database, etc.
     """
 
-    async def aload(self) -> Dict[str, FaktValue]:
+    async def aload(self) -> ActiveFakts:
         """Loads the configuration from the grant
 
         Depending on the grant, this function may load the configuration
@@ -64,7 +68,7 @@ class FaktsCache(Protocol):
     from a file, from a remote endpoint, from a database, etc.
     """
 
-    async def aload(self) -> Optional[Dict[str, FaktValue]]:
+    async def aload(self) -> ActiveFakts | None:
         """Loads the configuration from the grant
 
         Depending on the grant, this function may load the configuration
@@ -104,7 +108,7 @@ class FaktsCache(Protocol):
         """
         ...
 
-    async def aset(self, value: Dict[str, FaktValue]) -> None:
+    async def aset(self, value: ActiveFakts) -> None:
         """Refreshes the configuration from the grant
 
         This function is used to refresh the configuration from the grant.
@@ -115,7 +119,7 @@ class FaktsCache(Protocol):
         """
         ...
 
-    async def areset(self):
+    async def areset(self) -> None:
         """Resets the cache
 
         This function is used to reset the cache

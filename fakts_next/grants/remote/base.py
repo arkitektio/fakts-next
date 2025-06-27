@@ -1,9 +1,8 @@
+from fakts_next.models import ActiveFakts
 from ..errors import GrantError
-from typing import Dict
 import logging
 
 from .models import Demander, Discovery, Claimer
-from ...protocols import FaktValue
 from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
@@ -45,7 +44,7 @@ class RemoteGrant(BaseModel):
     claimer: Claimer
     """The claimer mechanism to use for claiming the token FROM the endpoint"""
 
-    async def aload(self) -> Dict[str, FaktValue]:
+    async def aload(self) -> ActiveFakts:
         """Load the configuration
 
         This function will first discover the endpoint, then demand a token from it,
