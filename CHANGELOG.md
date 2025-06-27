@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v2.0.0 (2025-06-27)
+
+### Features
+
+- Complete rework of the purpose of this libary, it now includes oauth and replaces herre, also it
+  does no longer allow async configuration but will allow for async service discover.
+  ([`b8beab4`](https://github.com/arkitektio/fakts-next/commit/b8beab476b3fc398e0f756fa6bcd70c7450036fb))
+
+
 ## v1.2.3 (2025-05-13)
 
 
