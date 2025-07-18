@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.0.1 (2025-07-18)
+
+### Bug Fixes
+
+- Bring back cache
+  ([`6f2280b`](https://github.com/arkitektio/fakts-next/commit/6f2280b8a6597c741419a3b6a0a9618427eae41b))
+
+
 ## v2.0.0 (2025-06-27)
 
 ### Features
