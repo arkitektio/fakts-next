@@ -11,6 +11,7 @@ from fakts_next.cache.nocache import NoCache
 from .protocols import FaktsCache, FaktValue, FaktsGrant
 from .models import ActiveFakts, Alias, Manifest
 from oauthlib.oauth2.rfc6749.clients.backend_application import BackendApplicationClient
+from oauthlib.oauth2.rfc6749.errors import InvalidClientError
 import aiohttp
 from oauthlib.common import urldecode
 import ssl
@@ -19,7 +20,9 @@ from ssl import SSLContext
 
 
 logger = logging.getLogger(__name__)
-current_fakts_next: contextvars.ContextVar[Optional["Fakts"]] = contextvars.ContextVar("current_fakts_next", default=None)
+current_fakts_next: contextvars.ContextVar[Optional["Fakts"]] = contextvars.ContextVar(
+    "current_fakts_next", default=None
+)
 
 
 class Fakts(KoiledModel):
@@ -80,7 +83,9 @@ class Fakts(KoiledModel):
     manifest: Manifest
 
     """"The manifest of the fakts. This is used to describe the fakts and its capabilities."""
-    ssl_context: SSLContext = Field(default_factory=lambda: ssl.create_default_context(cafile=certifi.where()))
+    ssl_context: SSLContext = Field(
+        default_factory=lambda: ssl.create_default_context(cafile=certifi.where())
+    )
 
     grant: FaktsGrant
     """The grant to load the configuration from"""
@@ -91,11 +96,19 @@ class Fakts(KoiledModel):
     loaded_fakts: ActiveFakts | None = Field(default=None, exclude=True)
     """The currently loaded fakts. Please use `get` to access the fakts"""
 
-    alias_map: Dict[str, Alias] = Field(default_factory=dict, exclude=True, description="Map of service names to active aliases")
+    alias_map: Dict[str, Alias] = Field(
+        default_factory=dict,
+        exclude=True,
+        description="Map of service names to active aliases",
+    )
 
-    loaded_token: Optional[str] = Field(default=None, exclude=True, description="The currently loaded token")
+    loaded_token: Optional[str] = Field(
+        default=None, exclude=True, description="The currently loaded token"
+    )
 
-    allow_auto_load: bool = Field(default=True, description="Should we autoload on get?")
+    allow_auto_load: bool = Field(
+        default=True, description="Should we autoload on get?"
+    )
     """Should we autoload the grants on a call to get?"""
 
     load_on_enter: bool = False
@@ -110,10 +123,12 @@ class Fakts(KoiledModel):
     _token_lock: Optional[asyncio.Lock] = None
     _alias_lock: Optional[asyncio.Lock] = None
 
-    async def arefresh_token(self) -> str:
+    async def arefresh_token(self, allow_refresh: bool = True) -> str:
         """Refresh the authentication token for a service (async)"""
         """Get Authentikation Token for a service (async)"""
-        assert self._lock is not None, "You need to enter the context first before calling this function"
+        assert self._lock is not None, (
+            "You need to enter the context first before calling this function"
+        )
         async with self._lock:
             if not self.loaded_fakts:
                 try:
@@ -149,7 +164,9 @@ class Fakts(KoiledModel):
 
         # Create an OAuth2 session for the OSF
         async with aiohttp.ClientSession(
-            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
+            connector=(
+                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
+            ),
             headers=headers,
         ) as session:
             async with session.post(
@@ -162,7 +179,17 @@ class Fakts(KoiledModel):
             ) as resp:
                 text = await resp.text()
 
-                auth_client.parse_request_body_response(text, scope=scope)
+                try:
+                    auth_client.parse_request_body_response(text, scope=scope)
+                except InvalidClientError as e:
+                    logger.error(
+                        f"Invalid client error while trying to get token for {self.loaded_fakts.auth.client_id} with response: {text}. We are trying to reload the fakts."
+                    )
+                    if not allow_refresh:
+                        raise e
+
+                    await self.aload(reload=True)
+                    return await self.arefresh_token(allow_refresh=False)
 
                 token = auth_client.token
                 self.loaded_token = str(token["access_token"])
@@ -170,7 +197,9 @@ class Fakts(KoiledModel):
 
     async def achallenge_alias(self, alias: Alias) -> bool:
         async with aiohttp.ClientSession(
-            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
+            connector=(
+                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
+            ),
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -181,7 +210,9 @@ class Fakts(KoiledModel):
             ) as resp:
                 # Check status code
                 if resp.status != 200:
-                    logger.error(f"Failed to challenge alias {alias} with status code {resp.status}")
+                    logger.error(
+                        f"Failed to challenge alias {alias} with status code {resp.status}"
+                    )
                     return False
                 else:
                     return True
@@ -191,7 +222,9 @@ class Fakts(KoiledModel):
     async def aget_token(self) -> str:
         """Refresh the authentication token for a service (async)"""
         """Get Authentikation Token for a service (async)"""
-        assert self._token_lock is not None, "You need to enter the context first before calling this function"
+        assert self._token_lock is not None, (
+            "You need to enter the context first before calling this function"
+        )
         async with self._token_lock:
             if not self.loaded_token:
                 try:
@@ -203,7 +236,7 @@ class Fakts(KoiledModel):
         assert self.loaded_token, "No token loaded yet. Please call load() first."
         return self.loaded_token
 
-    async def aload(self) -> ActiveFakts:
+    async def aload(self, reload: bool = False) -> ActiveFakts:
         """Load the fakts from the grant (async)
 
         This method will load the fakts from the grant, and set the loaded_fakts
@@ -213,7 +246,14 @@ class Fakts(KoiledModel):
         Returns:
             ActiveFakts: The loaded fakts
         """
+        if self.cache and not reload:
+            cached_fakts = await self.cache.aload()
+            if cached_fakts:
+                self.loaded_fakts = cached_fakts
+                return self.loaded_fakts
+
         self.loaded_fakts = await self.grant.aload()
+        await self.cache.aset(self.loaded_fakts)
         return self.loaded_fakts
 
     async def arefresh_alias(
@@ -236,7 +276,9 @@ class Fakts(KoiledModel):
         Returns:
             Alias: The refreshed alias
         """
-        assert self._lock is not None, "You need to enter the context first before calling this function"
+        assert self._lock is not None, (
+            "You need to enter the context first before calling this function"
+        )
         async with self._lock:
             if not self.loaded_fakts:
                 try:
@@ -246,7 +288,9 @@ class Fakts(KoiledModel):
                     raise e
 
         assert self.loaded_fakts, "No fakts loaded yet. Please call load() first."
-        assert service_name in self.loaded_fakts.instances, f"Service {service_name} not found in loaded fakts. Available services: {', '.join(self.loaded_fakts.instances.keys())}"
+        assert service_name in self.loaded_fakts.instances, (
+            f"Service {service_name} not found in loaded fakts. Available services: {', '.join(self.loaded_fakts.instances.keys())}"
+        )
 
         service_instance = self.loaded_fakts.instances[service_name]
 
@@ -260,7 +304,9 @@ class Fakts(KoiledModel):
                 self.alias_map[service_name] = alias
                 return alias
 
-        raise GroupNotFound(f"Could not find a valid alias for service {service_name}. Available aliases: {', '.join([str(alias.challenge_path) for alias in service_instance.aliases])} all failed to challenge.")
+        raise GroupNotFound(
+            f"Could not find a valid alias for service {service_name}. Available aliases: {', '.join([str(alias.challenge_path) for alias in service_instance.aliases])} all failed to challenge."
+        )
 
     async def aget_alias(
         self,
@@ -290,7 +336,9 @@ class Fakts(KoiledModel):
         Returns:
             dict: The active fakts
         """
-        assert self._alias_lock is not None, "You need to enter the context first before calling this function"
+        assert self._alias_lock is not None, (
+            "You need to enter the context first before calling this function"
+        )
         async with self._alias_lock:
             if fakts_key not in self.alias_map:
                 # If we don't have the alias in the map, we need to refresh it
@@ -300,7 +348,9 @@ class Fakts(KoiledModel):
                     logger.error(e, exc_info=True)
                     raise e
 
-        assert fakts_key in self.alias_map, f"Alias for key {fakts_key} not found in alias map. Available aliases: {', '.join(self.alias_map.keys())}"
+        assert fakts_key in self.alias_map, (
+            f"Alias for key {fakts_key} not found in alias map. Available aliases: {', '.join(self.alias_map.keys())}"
+        )
         return self.alias_map[fakts_key]
 
     def get_alias(
@@ -331,7 +381,13 @@ class Fakts(KoiledModel):
         Returns:
             dict: The active fakts
         """
-        return unkoil(self.aget_alias, fakts_key, cache=cache, store=store, omit_challenge=omit_challenge)
+        return unkoil(
+            self.aget_alias,
+            fakts_key,
+            cache=cache,
+            store=store,
+            omit_challenge=omit_challenge,
+        )
 
     def get_token(self) -> str:
         """Get Authentikation Token for a service (sync)
@@ -352,7 +408,9 @@ class Fakts(KoiledModel):
         processed at a time.
         """
 
-        current_fakts_next.set(self)  # TODO: We should set tokens, but depending on async/sync this is shit
+        current_fakts_next.set(
+            self
+        )  # TODO: We should set tokens, but depending on async/sync this is shit
         self._lock = asyncio.Lock()
         self._token_lock = asyncio.Lock()
         self._alias_lock = asyncio.Lock()
@@ -365,7 +423,9 @@ class Fakts(KoiledModel):
         traceback: Optional[Any],
     ) -> None:
         """Exit the context manager and clean up"""
-        current_fakts_next.set(None)  # TODO: And here we should reset, but can't because of koil unsafe thread
+        current_fakts_next.set(
+            None
+        )  # TODO: And here we should reset, but can't because of koil unsafe thread
 
     def _repr_html_inline_(self) -> str:
         """(Internal) HTML representation for jupyter"""
