@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.1.0 (2025-07-20)
+
+### Features
+
+- Add integration tests
+  ([`b57d29b`](https://github.com/arkitektio/fakts-next/commit/b57d29ba2960da17db50d93d5300c4a8654730da))
+
+
 ## v2.0.1 (2025-07-18)
 
 ### Bug Fixes
