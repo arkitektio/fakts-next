@@ -1,6 +1,6 @@
 import aiohttp
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 import logging
 from fakts_next.grants.remote.errors import DemandError
 from fakts_next.grants.remote.models import FaktsEndpoint
@@ -43,6 +43,7 @@ class RedeemDemander(BaseModel):
         description="The url to use for retrieving the token (overwrited the endpoint url)",
     )
     """The url to use for retrieving the token (overwrited the endpoint url)"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     async def ademand(self, endpoint: FaktsEndpoint) -> str:
         """Demand a token from the endpoint
@@ -60,9 +61,7 @@ class RedeemDemander(BaseModel):
             The token that was retrieved
         """
 
-        retrieve_url = (
-            self.retrieve_url or endpoint.retrieve_url or f"{endpoint.base_url}redeem/"
-        )
+        retrieve_url = self.retrieve_url or endpoint.retrieve_url or f"{endpoint.base_url}redeem/"
 
         async with aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(ssl=self.ssl_context)
@@ -90,9 +89,7 @@ class RedeemDemander(BaseModel):
 
                     raise RetrieveError(f"Unexpected status: {status}")
                 else:
-                    raise RetrieveError(
-                        "Error! Coud not claim this app on this endpoint"
-                    )
+                    raise RetrieveError("Error! Coud not claim this app on this endpoint")
 
     async def arefresh(self, endpoint: FaktsEndpoint) -> str:
         """Refreshes the token for the given endpoint.
@@ -115,8 +112,3 @@ class RedeemDemander(BaseModel):
         """
 
         return await self.ademand(endpoint)
-
-    class Config:
-        """Pydantic Config"""
-
-        arbitrary_types_allowed = True

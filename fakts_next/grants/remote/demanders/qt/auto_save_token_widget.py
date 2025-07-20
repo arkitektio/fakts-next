@@ -11,9 +11,7 @@ class ShouldWeSaveDialog(QtWidgets.QDialog):  # type: ignore
         super().__init__(*args, **kwargs)  # type: ignore
         self.setWindowTitle(f"Connected to {endpoint.name}")  # type: ignore
 
-        self.qlabel = QtWidgets.QLabel(
-            "Do you want to auto save this configuration for this endpoint?"
-        )
+        self.qlabel = QtWidgets.QLabel("Do you want to auto save this configuration for this endpoint?")
 
         vlayout = QtWidgets.QVBoxLayout()
         self.setLayout(vlayout)  # type: ignore

@@ -21,6 +21,7 @@ fakts = "fakts.cli.main:cli"
 
 [tool.uv]
 dev-dependencies = [
+    "dokker>=2.2",
     "pyqt5>=5.15.11",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=6.1.1",
@@ -83,7 +84,7 @@ exclude = [
 ]
 
 # Same as Black.
-line-length = 300
+line-length = 100
 
 [[tool.pydoc-markdown.loaders]]
 type = "python"

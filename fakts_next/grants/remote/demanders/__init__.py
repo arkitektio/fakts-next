@@ -1,4 +1,4 @@
-""" Remote Demanders mechanisms
+"""Remote Demanders mechanisms
 
 This module contains the different demanders mechanisms
 that can be used to demand a TOKEN from a previously

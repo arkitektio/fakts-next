@@ -33,9 +33,7 @@ class QtSettingsCache(BaseModel):
             The value to store
         """
 
-        cache = CacheModel(
-            config=value, created=datetime.datetime.now(), hash=self.hash
-        )
+        cache = CacheModel(config=value, created=datetime.datetime.now(), hash=self.hash)
 
         self.settings.setValue(self.save_key, cache.model_dump_json())  # type: ignore #
 

@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 
 class BaseFaktsGrant(BaseModel):
-
     async def aload(self) -> Dict[str, FaktValue]:
         """Loads the configuration from the grant
 

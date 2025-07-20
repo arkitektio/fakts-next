@@ -8,9 +8,7 @@ from typing import Optional, List, Tuple
 logger = logging.getLogger(__name__)
 
 
-async def check_wellknown(
-    url: str, ssl_context: ssl.SSLContext, timeout: int = 4
-) -> FaktsEndpoint:
+async def check_wellknown(url: str, ssl_context: ssl.SSLContext, timeout: int = 4) -> FaktsEndpoint:
     """Check the well-known endpoint
 
     This function will check the well-known endpoint and return the endpoint
@@ -55,9 +53,7 @@ async def check_wellknown(
 
             else:
                 logger.error(f"Could not retrieve on the endpoint: {resp.status}")
-                raise DiscoveryError(
-                    f"Error! We could not retrieve the endpoint. {url} "
-                )
+                raise DiscoveryError(f"Error! We could not retrieve the endpoint. {url} ")
 
 
 async def discover_url(
@@ -99,9 +95,7 @@ async def discover_url(
     if "://" not in url:
         logger.info(f"No protocol specified on {url}")
         if not auto_protocols or len(auto_protocols) == 0:
-            raise DiscoveryError(
-                "No protocol specified and no auto protocols specified"
-            )
+            raise DiscoveryError("No protocol specified and no auto protocols specified")
 
         errors: list[Tuple[str, Exception]] = []
 
@@ -111,17 +105,13 @@ async def discover_url(
                 if allow_appending_slash and not url.endswith("/"):
                     url = f"{url}/"
 
-                return await check_wellknown(
-                    f"{protocol}://{url}", ssl_context, timeout=timeout
-                )
+                return await check_wellknown(f"{protocol}://{url}", ssl_context, timeout=timeout)
             except Exception as e:
                 logger.info(f"Could not connect to {protocol}://{url}")
                 errors.append((protocol, e))
                 continue
 
-        errors_string = "\n".join(
-            [f"- {protocol}://{url}\n  " + str(e) for protocol, e in errors]
-        )
+        errors_string = "\n".join([f"- {protocol}://{url}\n  " + str(e) for protocol, e in errors])
 
         raise DiscoveryError(f"Could not connect via any protocol: \n{errors_string}")
 

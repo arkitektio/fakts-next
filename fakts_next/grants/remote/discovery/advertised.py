@@ -68,9 +68,7 @@ class Beacon(BaseModel):
     """The url of the endpoint"""
 
 
-async def alisten(
-    bind: ListenBinding, strict: bool = False
-) -> AsyncGenerator[Beacon, None]:
+async def alisten(bind: ListenBinding, strict: bool = False) -> AsyncGenerator[Beacon, None]:
     """A generator that listens on a broadcast port for beacons
 
     This generator listens on a specific binding for beacons.
@@ -125,9 +123,7 @@ async def alisten(
                             raise e
 
                 else:
-                    logger.error(
-                        f"Received Non Magic Response {data}. Maybe somebody sends"
-                    )
+                    logger.error(f"Received Non Magic Response {data}. Maybe somebody sends")
 
             except UnicodeEncodeError as e:
                 logger.error("Couldn't decode received message")
@@ -145,9 +141,7 @@ async def alisten(
         logger.info("Stopped checking")
 
 
-async def alisten_pure(
-    bind: ListenBinding, strict: bool = False
-) -> AsyncGenerator[Beacon, None]:
+async def alisten_pure(bind: ListenBinding, strict: bool = False) -> AsyncGenerator[Beacon, None]:
     """A generator that listens on a broadcast port for beacons
 
     This generator listens on a specific binding for beacons.

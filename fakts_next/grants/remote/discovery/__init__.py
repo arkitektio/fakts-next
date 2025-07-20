@@ -1,4 +1,4 @@
-""" Remote Discovery mechanisms
+"""Remote Discovery mechanisms
 
 This module contains the different discovery mechanisms
 that can be used to discover the endpoint to connect to.

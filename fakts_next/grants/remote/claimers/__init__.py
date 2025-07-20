@@ -1,7 +1,7 @@
-""" Remote Claimer mechanisms
+"""Remote Claimer mechanisms
 
 This module contains the different cleaimer mechanisms
-that can be used to retrieve a configuration from 
+that can be used to retrieve a configuration from
 a previously discovered endpoint and its token.
 
 

@@ -65,9 +65,7 @@ class FaktsEndpointButton(QtWidgets.QPushButton):  # type: ignore
 
     accept_clicked = QtCore.Signal(FaktsEndpoint)  # type: ignore
 
-    def __init__(
-        self, endpoint: FaktsEndpoint, parent: Optional[QtWidgets.QWidget] = None
-    ) -> None:
+    def __init__(self, endpoint: FaktsEndpoint, parent: Optional[QtWidgets.QWidget] = None) -> None:
         """Constructor for FaktsEndpointButton"""
         super(FaktsEndpointButton, self).__init__(parent)  # type: ignore
         self.endpoint = endpoint
@@ -342,9 +340,7 @@ class QtSelectableDiscovery(BaseModel):
         default=3,
         description="The timeout for the connection",
     )
-    additional_beacons: List[str] = Field(
-        default_factory=lambda: ["localhost:11000", "localhost:11001", "localhost:8000"]
-    )
+    additional_beacons: List[str] = Field(default_factory=lambda: ["localhost:11000", "localhost:11001", "localhost:8000"])
     widget: SelectBeaconWidget
 
     async def emit_endpoints(self) -> None:
@@ -448,9 +444,7 @@ class QtSelectableDiscovery(BaseModel):
                 )
                 user_definition_task = asyncio.create_task(self.await_user_definition())
 
-                endpoint: FaktsEndpoint = await wait_first(
-                    select_endpoint_task, user_definition_task
-                )
+                endpoint: FaktsEndpoint = await wait_first(select_endpoint_task, user_definition_task)
 
                 await self.widget.hide_coro.acall()  # type: ignore
 

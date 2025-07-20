@@ -2,9 +2,8 @@ from pydantic import ConfigDict, Field
 import ssl
 import certifi
 import aiohttp
-from typing import Dict
 from fakts_next.grants.remote.errors import ClaimError
-from fakts_next.grants.remote.models import FaktsEndpoint, FaktValue
+from fakts_next.grants.remote.models import FaktsEndpoint
 from pydantic import BaseModel
 
 from fakts_next.models import ActiveFakts

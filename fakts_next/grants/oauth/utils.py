@@ -18,11 +18,7 @@ def build_authorize_url(grant: BaseOauth2Grant) -> str:
     str
         The authorize url
     """
-    return (
-        f"{grant.base_url}/{grant.authorize_path}/"
-        if grant.append_trailing_slash
-        else f"{grant.base_url}/{grant.authorize_path}"
-    )
+    return f"{grant.base_url}/{grant.authorize_path}/" if grant.append_trailing_slash else f"{grant.base_url}/{grant.authorize_path}"
 
 
 def build_token_url(grant: BaseOauth2Grant) -> str:
@@ -38,11 +34,7 @@ def build_token_url(grant: BaseOauth2Grant) -> str:
     str
         The token url
     """
-    return (
-        f"{grant.base_url}/{grant.token_path}/"
-        if grant.append_trailing_slash
-        else f"{grant.base_url}/{grant.token_path}"
-    )
+    return f"{grant.base_url}/{grant.token_path}/" if grant.append_trailing_slash else f"{grant.base_url}/{grant.token_path}"
 
 
 def build_refresh_url(grant: BaseOauth2Grant) -> str:
@@ -58,8 +50,4 @@ def build_refresh_url(grant: BaseOauth2Grant) -> str:
     str
         The token url
     """
-    return (
-        f"{grant.base_url}/{grant.refresh_path}/"
-        if grant.append_trailing_slash
-        else f"{grant.base_url}/{grant.refresh_path}"
-    )
+    return f"{grant.base_url}/{grant.refresh_path}/" if grant.append_trailing_slash else f"{grant.base_url}/{grant.refresh_path}"

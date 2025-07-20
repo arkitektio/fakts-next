@@ -1,8 +1,6 @@
-from typing import List, Protocol, runtime_checkable, Optional, Dict, Literal
+from typing import List, Protocol, runtime_checkable, Optional, Literal
 from pydantic import BaseModel
-from fakts_next.protocols import FaktValue
-
-
+from fakts_next.models import ActiveFakts
 
 
 class Layer(BaseModel):
@@ -103,7 +101,7 @@ class Claimer(Protocol):
     user input.
     """
 
-    async def aclaim(self, token: str, endpoint: FaktsEndpoint) -> Dict[str, FaktValue]:
+    async def aclaim(self, token: str, endpoint: FaktsEndpoint) -> ActiveFakts:
         """Discovers an endpoint.
 
         This method should return an endpoint that can be used to retrieve

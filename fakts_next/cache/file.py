@@ -1,10 +1,9 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Optional
 import pydantic
 import datetime
 import logging
 import json
-from fakts_next.protocols import FaktValue
 from fakts_next.models import ActiveFakts
 
 logger = logging.getLogger(__name__)
@@ -96,10 +95,7 @@ class FileCache(pydantic.BaseModel):
                         cache = None
 
                     elif self.expires_in:
-                        if (
-                            cache.created + datetime.timedelta(seconds=self.expires_in)
-                            < datetime.datetime.now()
-                        ):
+                        if cache.created + datetime.timedelta(seconds=self.expires_in) < datetime.datetime.now():
                             cache = None
 
                 except pydantic.ValidationError as e:

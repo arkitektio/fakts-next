@@ -8,7 +8,7 @@ from pydantic import Field
 from typing import Optional
 from fakts_next.errors import GroupNotFound, NoFaktsFound
 from fakts_next.cache.nocache import NoCache
-from .protocols import FaktsCache, FaktValue, FaktsGrant
+from .protocols import FaktsCache, FaktsGrant
 from .models import ActiveFakts, Alias, Manifest
 from oauthlib.oauth2.rfc6749.clients.backend_application import BackendApplicationClient
 from oauthlib.oauth2.rfc6749.errors import InvalidClientError
@@ -106,9 +106,7 @@ class Fakts(KoiledModel):
         default=None, exclude=True, description="The currently loaded token"
     )
 
-    allow_auto_load: bool = Field(
-        default=True, description="Should we autoload on get?"
-    )
+    allow_auto_load: bool = Field(default=True, description="Should we autoload on get?")
     """Should we autoload the grants on a call to get?"""
 
     load_on_enter: bool = False
@@ -164,9 +162,7 @@ class Fakts(KoiledModel):
 
         # Create an OAuth2 session for the OSF
         async with aiohttp.ClientSession(
-            connector=(
-                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
-            ),
+            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
             headers=headers,
         ) as session:
             async with session.post(
@@ -197,9 +193,7 @@ class Fakts(KoiledModel):
 
     async def achallenge_alias(self, alias: Alias) -> bool:
         async with aiohttp.ClientSession(
-            connector=(
-                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
-            ),
+            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -299,10 +293,18 @@ class Fakts(KoiledModel):
                 # If we omit the challenge, we just return the alias
                 self.alias_map[service_name] = alias
                 return alias
-            challenge_ok = await self.achallenge_alias(alias)
-            if challenge_ok:
-                self.alias_map[service_name] = alias
-                return alias
+
+            try:
+                challenge_ok = await asyncio.wait_for(self.achallenge_alias(alias), timeout=3)
+                if challenge_ok:
+                    self.alias_map[service_name] = alias
+                    return alias
+            except asyncio.TimeoutError as e:
+                logger.error(
+                    f"Timeout while challenging alias {alias} for service {service_name}.",
+                    exc_info=True,
+                )
+                continue
 
         raise GroupNotFound(
             f"Could not find a valid alias for service {service_name}. Available aliases: {', '.join([str(alias.challenge_path) for alias in service_instance.aliases])} all failed to challenge."

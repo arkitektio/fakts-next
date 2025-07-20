@@ -1,4 +1,3 @@
-from pydantic import SecretStr
 from fakts_next.grants.remote.models import FaktsEndpoint
 from pydantic import BaseModel
 

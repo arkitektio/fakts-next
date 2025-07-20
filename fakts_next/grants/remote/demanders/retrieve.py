@@ -59,15 +59,9 @@ class RetrieveDemander(BaseModel):
             The token that was retrieved
         """
 
-        retrieve_url = (
-            self.retrieve_url
-            or endpoint.retrieve_url
-            or f"{endpoint.base_url}retrieve/"
-        )
+        retrieve_url = self.retrieve_url or endpoint.retrieve_url or f"{endpoint.base_url}retrieve/"
 
-        async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(ssl=self.ssl_context)
-        ) as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context)) as session:
             logger.debug(f"Requesting token from {retrieve_url}")
             async with session.post(
                 retrieve_url,
@@ -90,9 +84,7 @@ class RetrieveDemander(BaseModel):
 
                     raise RetrieveError(f"Unexpected status: {status}")
                 else:
-                    raise RetrieveError(
-                        "Error! Coud not claim this app on this endpoint"
-                    )
+                    raise RetrieveError("Error! Coud not claim this app on this endpoint")
 
     async def arefresh(self, endpoint: FaktsEndpoint) -> str:
         """Refreshes the token for the given endpoint.

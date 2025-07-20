@@ -27,9 +27,7 @@ def build_remote_testing(value: Dict[str, FaktValue]) -> RemoteGrant:
 
     """
     return RemoteGrant(
-        discovery=StaticDiscovery(
-            endpoint=FaktsEndpoint(base_url="https://example.com")
-        ),
+        discovery=StaticDiscovery(endpoint=FaktsEndpoint(base_url="https://example.com")),
         claimer=StaticClaimer(value=value),
         demander=StaticDemander(token="token"),  # type: ignore
     )

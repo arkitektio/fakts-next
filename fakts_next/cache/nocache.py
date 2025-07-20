@@ -1,9 +1,12 @@
 from typing import Dict, Optional
-from fakts_next.protocols import FaktValue, FaktsCache
+from fakts_next.models import ActiveFakts
+from fakts_next.protocols import FaktsCache
 
 
 class NoCache(FaktsCache):
-    async def aload(self) -> Optional[Dict[str, FaktValue]]:
+    """A cache implementation that does not store any data."""
+
+    async def aload(self) -> Optional[ActiveFakts]:
         """Loads the configuration from the grant
 
         It will try to load the configuration from the cache file.
@@ -25,7 +28,7 @@ class NoCache(FaktsCache):
 
         return None
 
-    async def aset(self, value: Dict[str, FaktValue]):
+    async def aset(self, value: ActiveFakts):
         """Refreshes the configuration from the grant
 
         This function is used to refresh the configuration from the grant.

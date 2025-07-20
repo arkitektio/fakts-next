@@ -10,13 +10,40 @@ from fakts_next.grants.remote.errors import DemandError
 
 import ssl
 import certifi
-from typing import List
+from typing import Awaitable, Callable, List
 from enum import Enum
 from .utils import (
     acheck_supported_layers,
     print_device_code_prompt,
     print_succesfull_login,
 )
+
+
+DeviceCodeHook = Callable[["FaktsEndpoint", str], Awaitable[None]]
+GrantedHook = Callable[["FaktsEndpoint", str], Awaitable[None]]
+
+
+async def display_in_terminal(endpoint: "FaktsEndpoint", code: str) -> None:
+    """A default hook that does nothing"""
+    querystring = urlencode(
+        {
+            "device_code": code,
+            "grant": "device_code",
+        }
+    )
+
+    webbrowser.open_new(endpoint.base_url + "configure/?" + querystring)
+
+    print_device_code_prompt(
+        endpoint.base_url + "configure/?" + querystring,
+        endpoint.base_url + "device",
+        code,
+    )
+
+
+async def granted_in_terminal(endpoint: "FaktsEndpoint", token: str) -> None:
+    """A default hook that is called when the device code is granted"""
+    print_succesfull_login()
 
 
 class DeviceCodeError(DemandError):
@@ -59,15 +86,24 @@ class DeviceCodeDemander(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    device_code_hook: DeviceCodeHook = Field(
+        default=display_in_terminal,
+        examples=True,
+        description="A callback function that is called when the device code is retrieved",
+    )
+    granted_hook: GrantedHook = Field(
+        default=granted_in_terminal,
+        examples=True,
+        description="A callback function that is called when the device code is granted",
+    )
+
     ssl_context: ssl.SSLContext = Field(
         default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
         exclude=True,
     )
     manifest: BaseModel
     """ An ssl context to use for the connection to the endpoint"""
-    expiration_time_seconds: int = Field(
-        default=300, description="The expiration time of the token in seconds"
-    )
+    expiration_time_seconds: int = Field(default=300, description="The expiration time of the token in seconds")
     """The expiration time of the token in seconds"""
     redirect_uris: List[str] = Field(
         default=[],
@@ -92,9 +128,7 @@ class DeviceCodeDemander(BaseModel):
     ) -> "DeviceCodeDemander":  # type: ignore
         """Validates and checks that either a schema_dsl or schema_glob is provided, or that allow_introspection is set to True"""
         if not self.redirect_uris and self.requested_client_kind == ClientKind.WEBSITE:
-            raise ValueError(
-                "You must provide a redirect uri if you want to request a website client"
-            )
+            raise ValueError("You must provide a redirect uri if you want to request a website client")
 
         return self
 
@@ -115,9 +149,7 @@ class DeviceCodeDemander(BaseModel):
             The devide-code that was requested
         """
 
-        async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(ssl=self.ssl_context)
-        ) as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context)) as session:
             while True:
                 async with session.post(
                     f"{endpoint.base_url}start/",
@@ -135,14 +167,10 @@ class DeviceCodeDemander(BaseModel):
                             return result["code"]
 
                         else:
-                            raise DeviceCodeError(
-                                f"Error! Could not retrieve code: {result.get('error', 'Unknown Error')}"
-                            )
+                            raise DeviceCodeError(f"Error! Could not retrieve code: {result.get('error', 'Unknown Error')}")
 
                     else:
-                        raise DeviceCodeError(
-                            f"Server Error! Could not retrieve code {await response.text()}"
-                        )
+                        raise DeviceCodeError(f"Server Error! Could not retrieve code {await response.text()}")
 
     async def ademand(self, endpoint: FaktsEndpoint) -> str:
         """Requests a token from the fakts_next server
@@ -173,67 +201,38 @@ class DeviceCodeDemander(BaseModel):
         """
 
         code = await self.arequest_code(endpoint)
-        querystring = urlencode(
-            {
-                "device_code": code,
-                "grant": "device_code",
-            }
-        )
 
-        if self.open_browser:
-            webbrowser.open_new(endpoint.base_url + "configure/?" + querystring)
-
-        print_device_code_prompt(
-            endpoint.base_url + "configure/?" + querystring,
-            endpoint.base_url + "device",
-            code,
-        )
+        await self.device_code_hook(endpoint, code)
 
         start_time = time.time()
 
-        async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(ssl=self.ssl_context)
-        ) as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context)) as session:
             while True:
-                async with session.post(
-                    f"{endpoint.base_url}challenge/", json={"code": code}
-                ) as response:
+                async with session.post(f"{endpoint.base_url}challenge/", json={"code": code}) as response:
                     if response.status == HTTPStatus.OK:
                         result = await response.json()
                         if result["status"] == "waiting":
                             if time.time() - start_time > self.timeout:
-                                raise DeviceCodeTimeoutError(
-                                    "Timeout for device code grant reached."
-                                )
+                                raise DeviceCodeTimeoutError("Timeout for device code grant reached.")
 
                             await asyncio.sleep(1)
                             continue
 
                         if result["status"] == "pending":
                             if time.time() - start_time > self.timeout:
-                                raise DeviceCodeTimeoutError(
-                                    "Timeout for device code grant reached."
-                                )
+                                raise DeviceCodeTimeoutError("Timeout for device code grant reached.")
                             await asyncio.sleep(1)
                             continue
 
                         if result["status"] == "granted":
-                            if not self.open_browser:
-                                print_succesfull_login()
-
+                            await self.granted_hook(endpoint, result["token"])
                             return result["token"]
 
                         if result["status"] == "error":
-                            raise DeviceCodeError(
-                                f"Error! Could not retrieve code: {result.get('error', 'Unknown Error')}"
-                            )
+                            raise DeviceCodeError(f"Error! Could not retrieve code: {result.get('error', 'Unknown Error')}")
 
                         if result["status"] == "denied":
-                            raise DeviceCodeError(
-                                f"Denied! The user Denied: {result.get('message', 'Unknown Error')}"
-                            )
+                            raise DeviceCodeError(f"Denied! The user Denied: {result.get('message', 'Unknown Error')}")
 
                     else:
-                        raise DeviceCodeError(
-                            f"Error! Could not retrieve code {await response.text()}"
-                        )
+                        raise DeviceCodeError(f"Error! Could not retrieve code {await response.text()}")
