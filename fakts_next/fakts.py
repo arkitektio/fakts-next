@@ -106,7 +106,9 @@ class Fakts(KoiledModel):
         default=None, exclude=True, description="The currently loaded token"
     )
 
-    allow_auto_load: bool = Field(default=True, description="Should we autoload on get?")
+    allow_auto_load: bool = Field(
+        default=True, description="Should we autoload on get?"
+    )
     """Should we autoload the grants on a call to get?"""
 
     load_on_enter: bool = False
@@ -162,7 +164,9 @@ class Fakts(KoiledModel):
 
         # Create an OAuth2 session for the OSF
         async with aiohttp.ClientSession(
-            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
+            connector=(
+                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
+            ),
             headers=headers,
         ) as session:
             async with session.post(
@@ -193,7 +197,9 @@ class Fakts(KoiledModel):
 
     async def achallenge_alias(self, alias: Alias) -> bool:
         async with aiohttp.ClientSession(
-            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
+            connector=(
+                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
+            ),
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -250,6 +256,20 @@ class Fakts(KoiledModel):
         await self.cache.aset(self.loaded_fakts)
         return self.loaded_fakts
 
+    async def arefresh(self):
+        """Refresh the fakts (async)
+
+        This method will refresh the fakts by calling the grant's refresh method.
+        It will also update the loaded_fakts attribute and cache.
+        """
+        if not self.loaded_fakts:
+            await self.aload(reload=True)
+        else:
+            self.loaded_fakts = await self.grant.arefresh(self.loaded_fakts)
+            await self.cache.aset(self.loaded_fakts)
+
+        return self.loaded_fakts
+
     async def arefresh_alias(
         self,
         service_name: Optional[str] = None,
@@ -295,7 +315,9 @@ class Fakts(KoiledModel):
                 return alias
 
             try:
-                challenge_ok = await asyncio.wait_for(self.achallenge_alias(alias), timeout=3)
+                challenge_ok = await asyncio.wait_for(
+                    self.achallenge_alias(alias), timeout=3
+                )
                 if challenge_ok:
                     self.alias_map[service_name] = alias
                     return alias

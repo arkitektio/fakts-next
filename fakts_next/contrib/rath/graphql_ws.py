@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel
 from fakts_next.fakts import Fakts
-from rath.links.graphql_ws import GraphQLWSLink
+from rath.links.graphql_ws import GraphQLWSLink, Operation
 
 
 class WebsocketHttpConfig(BaseModel):
@@ -25,19 +25,20 @@ class FaktsGraphQLWSLink(GraphQLWSLink):
     fakts_group: str = "websocket"
     """ The fakts group within the fakts context to use for configuration """
 
-    def configure(self, fakt: WebsocketHttpConfig) -> None:
+    async def aconfigure(self) -> None:
         """Configure the link with the given fakt"""
-        self.ws_endpoint_url = fakt.ws_endpoint_url
 
-    async def aconnect(self, operation: Any) -> None:
+        alias = await self.fakts.aget_alias(self.fakts_group)
+        self.ws_endpoint_url = alias.to_ws_path("graphql")
+
+    async def aconnect(self, operation: Operation) -> None:
         """Connects the link to the server
 
         This method will retrieve the configuration from the fakts context,
         and configure the link with it. Before connecting, it will check if the
         configuration has changed, and if so, it will reconfigure the link.
         """
-        fakt = await self.fakts.aget(self.fakts_group)
-        assert isinstance(fakt, dict), "FaktsAIOHttpLink: fakts group is not a dict"
-        self.configure(WebsocketHttpConfig(**fakt))  # type: ignore
+
+        await self.aconfigure()
 
         return await super().aconnect(operation)
