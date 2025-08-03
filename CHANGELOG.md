@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.2.0 (2025-08-03)
+
+### Features
+
+- Fix the graphql_ws link
+  ([`1cd2d13`](https://github.com/arkitektio/fakts-next/commit/1cd2d13e6bb3672a2e121e3c5794f318474537fa))
+
+
 ## v2.1.0 (2025-07-20)
 
 ### Features
