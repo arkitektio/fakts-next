@@ -149,10 +149,14 @@ class Manifest(BaseModel):
     """ A URL to the logo of the app TODO: We should enforce this to be a http URL as local paths won't work """
     requirements: Optional[List[Requirement]] = Field(default_factory=list)
     """ Requirements that this app has TODO: What are the requirements? """
-    model_config = ConfigDict(extra="forbid")
+    node_id: Optional[str] = None
+    """ The node ID of the app instance, will be set automatically to the current node ID """
 
     description: Optional[str] = None
     """ A human readable description of the app """
+
+    model_config = ConfigDict(extra="forbid")
+    """ Configuration for the pydantic model to forbid extra fields """
 
     def hash(self) -> str:
         """Hash the manifest
@@ -170,7 +174,9 @@ class Manifest(BaseModel):
         unsorted_dict = self.model_dump()
 
         # sort the requirements
-        unsorted_dict["requirements"] = sorted(unsorted_dict["requirements"], key=lambda x: x["key"])
+        unsorted_dict["requirements"] = sorted(
+            unsorted_dict["requirements"], key=lambda x: x["key"]
+        )
         # sort the scopes
         unsorted_dict["scopes"] = sorted(unsorted_dict["scopes"])
 
