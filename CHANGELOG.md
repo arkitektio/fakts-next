@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.3.0 (2025-11-13)
+
+### Features
+
+- Add the node_id property
+  ([`366b1e0`](https://github.com/arkitektio/fakts-next/commit/366b1e0d8fc5aa3bc64c0417216fa184abd8cc4d))
+
+
 ## v2.2.0 (2025-08-03)
 
 ### Features
