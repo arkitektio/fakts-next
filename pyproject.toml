@@ -1,6 +1,6 @@
 [project]
 name = "fakts-next"
-version = "2.3.0"
+version = "2.4.0"
 description = "asynchronous configuration provider ( tailored to support dynamic client-server relations)"
 authors = [{ name = "jhnnsrs", email = "jhnnsrs@gmail.com" }]
 requires-python = ">=3.11"

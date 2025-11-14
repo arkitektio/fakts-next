@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.4.0 (2025-11-14)
+
+### Features
+
+- Add public sources
+  ([`c59c222`](https://github.com/arkitektio/fakts-next/commit/c59c222391fb084b6cbc89387ec0b8fab030beb2))
+
+
 ## v2.3.0 (2025-11-13)
 
 ### Features
