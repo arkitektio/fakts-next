@@ -1,3 +1,4 @@
+from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import List, Optional
 import json
@@ -124,6 +125,14 @@ class Requirement(BaseModel):
     """ The description is a human readable description of the requirement. Will be show to the user when asking for the requirement."""
 
 
+class PublicSource(BaseModel):
+    """A public source kind is a way to specify a kind of public source."""
+
+    kind: str
+    """ The name of the public source kind, e.g. "git", "docker", etc."""
+    url: str
+
+
 class Manifest(BaseModel):
     """A manifest for an app that can be installed in ArkitektNext
 
@@ -151,6 +160,7 @@ class Manifest(BaseModel):
     """ Requirements that this app has TODO: What are the requirements? """
     node_id: Optional[str] = None
     """ The node ID of the app instance, will be set automatically to the current node ID """
+    public_sources: Optional[List[PublicSource]] = Field(default_factory=list)
 
     description: Optional[str] = None
     """ A human readable description of the app """
