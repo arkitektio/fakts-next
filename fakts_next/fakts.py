@@ -1,28 +1,45 @@
 import asyncio
 import contextvars
+import json
 import logging
-from typing import Any, Dict, Type
-from koil.composition import KoiledModel
-from koil.helpers import unkoil
-from pydantic import Field
-from typing import Optional
-from fakts_next.errors import GroupNotFound, NoFaktsFound
-from fakts_next.cache.nocache import NoCache
-from .protocols import FaktsCache, FaktsGrant
-from .models import ActiveFakts, Alias, Manifest
+import ssl
+from os import error
+from pprint import pprint
+from re import A
+from ssl import SSLContext
+from typing import Any, Dict, Optional, Type
+
+import aiohttp
+import certifi
+from oauthlib.common import urldecode
 from oauthlib.oauth2.rfc6749.clients.backend_application import BackendApplicationClient
 from oauthlib.oauth2.rfc6749.errors import InvalidClientError
-import aiohttp
-from oauthlib.common import urldecode
-import ssl
-import certifi
-from ssl import SSLContext
+from pydantic import BaseModel, Field
 
+from fakts_next.cache.nocache import NoCache
+from fakts_next.errors import GroupNotFound, NoFaktsFound
+from koil.composition import KoiledModel
+from koil.helpers import unkoil
+
+from .models import ActiveFakts, Alias, Manifest
+from .protocols import FaktsCache, FaktsGrant
 
 logger = logging.getLogger(__name__)
 current_fakts_next: contextvars.ContextVar[Optional["Fakts"]] = contextvars.ContextVar(
     "current_fakts_next", default=None
 )
+
+
+class AliasReport(BaseModel):
+    alias_id: str | None = None
+    reason: str | None = None
+    valid: bool = False
+
+
+class ReportRequest(BaseModel):
+    token: str
+    alias_reports: Dict[str, AliasReport]
+    functional: bool
 
 
 class Fakts(KoiledModel):
@@ -101,14 +118,17 @@ class Fakts(KoiledModel):
         exclude=True,
         description="Map of service names to active aliases",
     )
+    report_map: Dict[str, AliasReport] = Field(
+        default_factory=dict,
+        exclude=True,
+        description="Map of service names to errors encountered during alias challenges",
+    )
 
     loaded_token: Optional[str] = Field(
         default=None, exclude=True, description="The currently loaded token"
     )
 
-    allow_auto_load: bool = Field(
-        default=True, description="Should we autoload on get?"
-    )
+    allow_auto_load: bool = Field(default=True, description="Should we autoload on get?")
     """Should we autoload the grants on a call to get?"""
 
     load_on_enter: bool = False
@@ -164,9 +184,7 @@ class Fakts(KoiledModel):
 
         # Create an OAuth2 session for the OSF
         async with aiohttp.ClientSession(
-            connector=(
-                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
-            ),
+            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
             headers=headers,
         ) as session:
             async with session.post(
@@ -197,9 +215,7 @@ class Fakts(KoiledModel):
 
     async def achallenge_alias(self, alias: Alias) -> bool:
         async with aiohttp.ClientSession(
-            connector=(
-                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
-            ),
+            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -213,7 +229,7 @@ class Fakts(KoiledModel):
                     logger.error(
                         f"Failed to challenge alias {alias} with status code {resp.status}"
                     )
-                    return False
+                    raise Exception(f"Received status code {resp.status}")
                 else:
                     return True
 
@@ -270,25 +286,19 @@ class Fakts(KoiledModel):
 
         return self.loaded_fakts
 
-    async def arefresh_alias(
+    async def refresh_aliases(
         self,
-        service_name: Optional[str] = None,
         omit_challenge: bool = False,
-        cache: bool = True,
-        store: bool = True,
-    ) -> Alias:
-        """Refresh the alias for a service (async)
+        omit_report: bool = True,
+    ) -> None:
+        """Refresh all aliases (async)
 
-        This method will refresh the alias for a service, by calling the challenge path
-        of the alias. If the challenge fails, it will raise an exception.
+        This method will refresh all aliases by calling the challenge path
+        of each alias. If the challenge fails, it will skip the alias.
 
         Args:
-            service_name (str): The name of the service to refresh the alias for
-            cache (bool, optional): Should we cache the alias? Defaults to True.
-            store (bool, optional): Should we store the alias in the cache? Defaults to True.
-
-        Returns:
-            Alias: The refreshed alias
+            omit_challenge (bool, optional): Should we omit the challenge? Defaults to False.
+            omit_report (bool, optional): Should we omit the report? Defaults to True.
         """
         assert self._lock is not None, (
             "You need to enter the context first before calling this function"
@@ -302,40 +312,135 @@ class Fakts(KoiledModel):
                     raise e
 
         assert self.loaded_fakts, "No fakts loaded yet. Please call load() first."
-        assert service_name in self.loaded_fakts.instances, (
-            f"Service {service_name} not found in loaded fakts. Available services: {', '.join(self.loaded_fakts.instances.keys())}"
-        )
+        print(self.loaded_fakts)
+        self.alias_map = {}
+        self.report_map = {}
+        composition_errors = []
 
-        service_instance = self.loaded_fakts.instances[service_name]
+        for req in self.manifest.requirements:
+            instance = self.loaded_fakts.instances.get(req.key)
+            if not instance:
+                if req.optional:
+                    logger.warning(f"No instance found for optional service {req.key}.")
+                    self.report_map[req.key] = AliasReport(
+                        alias_id=None,
+                        reason=f"No instance found for optional service {req.key}.",
+                        valid=True,
+                    )
+                    continue
+                else:
+                    logger.error(f"No instance found for required service {req.key}.")
+                    self.report_map[req.key] = AliasReport(
+                        alias_id=None,
+                        reason=f"No instance found for optional service {req.key}.",
+                        valid=False,
+                    )
+                    composition_errors.append(self.error_map[req.key])
+                    continue
 
-        for alias in service_instance.aliases:
-            if omit_challenge:
-                # If we omit the challenge, we just return the alias
-                self.alias_map[service_name] = alias
-                return alias
+            if not instance.aliases:
+                if req.optional:
+                    logger.warning(f"No aliases listed for optional service {req.key}.")
+                    self.report_map[req.key] = AliasReport(
+                        alias_id=None,
+                        reason=f"No aliases listed for optional service {req.key}.",
+                        valid=True,
+                    )
+                    continue
+                else:
+                    logger.error(f"No aliases listed for required service {req.key}.")
+                    self.report_map[req.key] = AliasReport(
+                        alias_id=None,
+                        reason=f"No aliases listed for optional service {req.key}.",
+                        valid=False,
+                    )
+                    composition_errors.append(self.error_map[req.key])
+                    continue
 
-            try:
-                challenge_ok = await asyncio.wait_for(
-                    self.achallenge_alias(alias), timeout=3
+            selected_alias = None
+            errors_in_alias = []
+
+            for alias in instance.aliases:
+                if omit_challenge:
+                    # If we omit the challenge, we just return the alias
+                    selected_alias = alias
+                    break
+
+                try:
+                    challenge_ok = await asyncio.wait_for(self.achallenge_alias(alias), timeout=3)
+                    if challenge_ok:
+                        selected_alias = alias
+                        break
+                except asyncio.TimeoutError as e:
+                    errors_in_alias.append(
+                        f"Timeout while challenging alias {alias.id} for service {req.key}."
+                    )
+                except Exception as e:
+                    errors_in_alias.append(f"Error while challenging alias {alias.id}: {str(e)}")
+
+            print(errors_in_alias)
+
+            if selected_alias:
+                self.alias_map[req.key] = selected_alias
+                self.report_map[req.key] = AliasReport(
+                    alias_id=selected_alias.id,
+                    reason=None,
+                    valid=True,
                 )
-                if challenge_ok:
-                    self.alias_map[service_name] = alias
-                    return alias
-            except asyncio.TimeoutError as e:
-                logger.error(
-                    f"Timeout while challenging alias {alias} for service {service_name}.",
-                    exc_info=True,
+            else:
+                error_message = f"All alias challenges failed for service {req.key}. " + " ".join(
+                    errors_in_alias
                 )
-                continue
+                if req.optional:
+                    self.report_map[req.key] = AliasReport(
+                        alias_id=None,
+                        reason=error_message,
+                        valid=False,
+                    )
+                else:
+                    self.report_map[req.key] = AliasReport(
+                        alias_id=None,
+                        reason=error_message,
+                        valid=False,
+                    )
+                    composition_errors.append(error_message)
 
-        raise GroupNotFound(
-            f"Could not find a valid alias for service {service_name}. Available aliases: {', '.join([str(alias.challenge_path) for alias in service_instance.aliases])} all failed to challenge."
-        )
+        if not omit_report:
+            report = ReportRequest(
+                token=self.loaded_fakts.auth.client_token,
+                alias_reports=self.report_map,
+                functional=len(composition_errors) == 0,
+            )
+            print("Reporting usage:", report)
+
+            async with aiohttp.ClientSession(
+                connector=(
+                    aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
+                ),
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                },
+            ) as session:
+                async with session.post(
+                    self.loaded_fakts.auth.report_url,
+                    json=report.model_dump(),
+                ) as resp:
+                    data = await resp.json()
+                    # Check status code
+                    print("Reporting usage, got response:", data)
+                    if resp.status != 200:
+                        raise Exception(f"Failed to report usage with status code {resp.status}")
+
+        if composition_errors:
+            joined_errors = "\n".join(composition_errors)
+            raise Exception(f"Errors in your aliases: {joined_errors}")
 
     async def aget_alias(
         self,
         fakts_key: Optional[str] = None,
         omit_challenge: bool = False,
+        omit_report: bool = True,
         cache: bool = True,
         store: bool = True,
     ) -> Alias:
@@ -367,7 +472,9 @@ class Fakts(KoiledModel):
             if fakts_key not in self.alias_map:
                 # If we don't have the alias in the map, we need to refresh it
                 try:
-                    await self.arefresh_alias(fakts_key, omit_challenge=omit_challenge)
+                    await self.refresh_aliases(
+                        omit_challenge=omit_challenge, omit_report=omit_report
+                    )
                 except GroupNotFound as e:
                     logger.error(e, exc_info=True)
                     raise e
@@ -382,6 +489,7 @@ class Fakts(KoiledModel):
         fakts_key: Optional[str] = None,
         cache: bool = True,
         omit_challenge: bool = False,
+        omit_report: bool = True,
         store: bool = True,
     ) -> Alias:
         """Get Fakt Value (sync)
@@ -411,6 +519,7 @@ class Fakts(KoiledModel):
             cache=cache,
             store=store,
             omit_challenge=omit_challenge,
+            omit_report=omit_report,
         )
 
     def get_token(self) -> str:

@@ -54,7 +54,9 @@ class ClaimEndpointClaimer(BaseModel):
             An error occured while claiming the configuration
         """
 
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context)) as session:
+        async with aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(ssl=self.ssl_context)
+        ) as session:
             async with session.post(
                 f"{endpoint.base_url}claim/",
                 json={
@@ -73,7 +75,9 @@ class ClaimEndpointClaimer(BaseModel):
                     if status == "error":
                         raise ClaimError(data["message"])
                     if status == "granted":
-                        return ActiveFakts(**data["config"])
+                        fakts = ActiveFakts(**data["config"])
+                        print("Claimed configuration:", fakts)
+                        return fakts
                     if status == "denied":
                         raise ClaimError("Access denied")
 

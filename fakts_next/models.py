@@ -11,6 +11,8 @@ class Alias(BaseModel):
     It contains the host, port, ssl flag, path and challenge.
     """
 
+    id: str
+    """The unique identifier of the alias."""
     host: str
     port: Optional[int] = None
     """The port is optional, if not set, the default port for the service will be"""
@@ -90,9 +92,11 @@ class Instance(BaseModel):
 class AuthFakt(BaseModel):
     """AuthFakt is a special kind of Fakt that is used to authenticate the user with"""
 
+    client_token: str
     client_id: str
     client_secret: str
     token_url: str
+    report_url: str
     scopes: List[str] = Field(default_factory=lambda: ["openid", "profile", "email"])
     """Scopes that this Fakt should request from the user"""
 

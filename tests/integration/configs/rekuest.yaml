@@ -6,6 +6,10 @@ db:
   password: hello_django
   port: 5432
   username: hello_django
+authentikate:
+  - kind: jwks_uri
+    issuer: http://lok
+    jwks_uri: https:/lok/lok/o/jwks/
 django:
   admin:
     email: admin@admin.com

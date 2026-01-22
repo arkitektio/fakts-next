@@ -104,62 +104,25 @@ token_expire_seconds: 700000
 organizations:
   - name: Default
     identifier: default
-  - name: UC2
-    identifier: uc2
-  - name: IAC
-    identifier: iac
-roles:
-  - name: IAC PhD-Students
-    identifier: phd
-    description: "All phds in the group"
-    organization: iac
+    owner: jhnnsrs
+  - name: iac
+    identifier: iac 
+    owner: jhnnsrs
+
 users:
   - name: Johannes
     username: jhnnsrs
     password: mysecret
-    active_organization: iac
     memberships:
       - organization: iac
         roles: ["admin"]
-      - organization: uc2
-        roles: ["admin"]
-  - name: DemoUser
-    username: demo
-    password: demo
-    active_organization: iac
-    memberships:
-      - organization: iac
-        roles: ["viewer"]
-  - name: Benedict
-    username: beniroquai
-    password: my-other-name
-    active_organization: uc2
-    memberships:
-      - organization: uc2
-        roles: ["admin"]
-  - name: Bot
-    username: iacbot
-    password: my-other-name
-    active_organization: iac
-    memberships:
-      - organization: iac
-        roles: ["bot"]
-layers:
-  - identifier: public
-    kind: public
-  - identifier: docker
-    kind: docker
 
-instances:
-  - identifier: local-rekuest
-    service: live.arkitekt.rekuest
-    aliases:
-      - layer: public
-        kind: absolute
-        host: localhost
-        port: 6888
-        ssl: False
-        challenge: ht
+
+issuer:
+  oidc_issuer: "http://lok"
+
+oidc_issuer: "http://lok"
+
   
 s3:
   access_key: mikro_access_key
@@ -171,3 +134,44 @@ s3:
   port: 9000
   protocol: http
   secret_key: mikro_secret_key
+
+
+kommunity_partners:
+  - identifier: little_sidecar
+    name: "Sidecar Demo"
+    website_url: "https://sidecar.fake"
+    partner_kind: "preauthorized"
+    auto_configure: true
+    preconfigured_composition:
+        identifier: go.arkitekt.live
+        instances:
+        - aliases:
+          - challenge: ht
+            host: localhost
+            id: local_rekuest
+            port: 6888
+            kind: absolute
+            name: demo.arkitekt.live
+            scope: public
+            ssl: false
+          identifier: Rekuest Service
+          manifest:
+            description: Rekuest Service for Arkitekt Live
+            identifier: live.arkitekt.rekuest
+            name: Rekuest
+            node_id: 47de8b7327024c68820ea042d1bdb37b
+            public_sources:
+            - kind: github
+              url: https://github.com/arkitektio/rekuest-server-next
+            roles:
+            - description: Can assign to apps
+              key: Assigner
+            - description: Can review data
+              key: Reviewer
+            scopes:
+            - description: Read access to Rekuest data
+              key: read
+            - description: Write access to Rekuest data
+              key: write
+            version: 1.0.0
+        

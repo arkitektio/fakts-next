@@ -16,7 +16,9 @@ def test_cache():
             auth=AuthFakt(
                 client_id="test_client_id",
                 client_secret="test_client",
+                client_token="test_client_token",
                 token_url="http://localhost:8000/token",
+                report_url="http://localhost:8000/report",
             ),
             instances={
                 "test": Instance(
@@ -24,6 +26,7 @@ def test_cache():
                     identifier="test_instance",
                     aliases=[
                         Alias(
+                            id="test",
                             host="localhost",
                             port=8000,
                             path="/test",
@@ -42,9 +45,13 @@ def test_cache():
             identifier="test_manifest",
             scopes=["openid", "profile", "email"],
             logo="http://localhost:8000/logo.png",
+            requirements=[{
+                "key": "test",
+                "service": "test_service",
+            }],
         ),
     )
 
     with fakts_next:
-        alias = fakts_next.get_alias("test", omit_challenge=True)
+        alias = fakts_next.get_alias("test", omit_challenge=True, omit_report=True)
         assert alias is not None
