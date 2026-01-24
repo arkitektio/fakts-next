@@ -30,7 +30,7 @@ def test_device_code_grant_node_id(deployed_infra: Deployment):
         
 
         await deployed_infra.arun(
-            "lok", f"uv run python manage.py validatecode {device_code} --user jhnnsrs --org iac"
+            "lok", f"uv run python manage.py validatecode --code {device_code} --user demo --org demo --composition localhost"
         )
 
     fakts_next = Fakts(

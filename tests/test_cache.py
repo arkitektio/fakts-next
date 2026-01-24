@@ -3,7 +3,7 @@ from fakts_next.cache.file import FileCache
 import os
 
 from fakts_next.grants.hard import HardFaktsGrant
-from fakts_next.models import ActiveFakts, AuthFakt, Instance, Manifest, SelfFakt, Alias
+from fakts_next.models import ActiveFakts, AuthFakt, Instance, Manifest, SelfFakt, Alias, Requirement
 
 
 TESTS_FOLDER = str(os.path.dirname(os.path.abspath(__file__)))
@@ -45,10 +45,7 @@ def test_cache():
             identifier="test_manifest",
             scopes=["openid", "profile", "email"],
             logo="http://localhost:8000/logo.png",
-            requirements=[{
-                "key": "test",
-                "service": "test_service",
-            }],
+            requirements=[Requirement(key="test", service="test_service")],
         ),
     )
 

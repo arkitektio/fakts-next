@@ -25,7 +25,7 @@ services:
     - redis
     - db
     - minio
-    image: jhnnsrs/lok:dev
+    image: jhnnsrs/lok:latest
     command: bash run-debug.sh
     stop_grace_period: 1s
     ports:
