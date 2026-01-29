@@ -4,6 +4,7 @@ import pydantic
 import datetime
 import logging
 import json
+import re
 from fakts_next.models import ActiveFakts
 
 logger = logging.getLogger(__name__)
@@ -63,6 +64,42 @@ class FileCache(pydantic.BaseModel):
     expires_in: Optional[int] = None
     """When should the cache expire"""
 
+    def _sanitize_cache_path(self, path: str) -> str:
+        """Sanitize the cache file path to ensure it's valid across platforms.
+        
+        This method ensures that:
+        1. The parent directory exists
+        2. The filename doesn't contain invalid characters (e.g., colons, backslashes on Windows)
+        
+        Parameters
+        ----------
+        path : str
+            The cache file path to sanitize
+            
+        Returns
+        -------
+        str
+            The sanitized cache file path
+        """
+        # Split the path into directory and filename
+        directory = os.path.dirname(path)
+        filename = os.path.basename(path)
+        
+        # Sanitize the filename by replacing invalid characters
+        # On Windows, the following characters are invalid: < > : " / \ | ? *
+        # We'll replace them with underscores to make the filename valid
+        sanitized_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+        
+        # Ensure the directory exists
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
+        
+        # Reconstruct the path
+        if directory:
+            return os.path.join(directory, sanitized_filename)
+        else:
+            return sanitized_filename
+
     async def aload(self) -> Optional[ActiveFakts]:
         """Loads the configuration from the grant
 
@@ -84,9 +121,10 @@ class FileCache(pydantic.BaseModel):
         """
 
         cache = None
+        sanitized_path = self._sanitize_cache_path(self.cache_file)
 
-        if os.path.exists(self.cache_file):
-            with open(self.cache_file, "r") as f:
+        if os.path.exists(sanitized_path):
+            with open(sanitized_path, "r") as f:
                 x = json.load(f)
                 try:
                     cache = CacheFile(**x)
@@ -117,8 +155,9 @@ class FileCache(pydantic.BaseModel):
         """
 
         cache = CacheFile(fakts=value, created=datetime.datetime.now(), hash=self.hash)
+        sanitized_path = self._sanitize_cache_path(self.cache_file)
 
-        with open(self.cache_file, "w+") as f:
+        with open(sanitized_path, "w+") as f:
             json.dump(json.loads(cache.model_dump_json()), f)
 
     async def areset(self):
@@ -131,6 +170,7 @@ class FileCache(pydantic.BaseModel):
         The request object is used to pass information
         """
 
-        if os.path.exists(self.cache_file):
-            os.remove(self.cache_file)
+        sanitized_path = self._sanitize_cache_path(self.cache_file)
+        if os.path.exists(sanitized_path):
+            os.remove(sanitized_path)
         return None
