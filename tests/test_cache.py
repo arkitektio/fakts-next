@@ -131,13 +131,13 @@ def test_cache_sanitize_method():
     
     # Test various paths with invalid characters
     test_cases = [
-        ("C:\\Users\\test\\file.json", "C__Users__test__file.json"),
-        (".arkitekt/cache/C:\\test\\file.json", ".arkitekt/cache/C__test__file.json"),
-        ("path/to/file:with:colons.json", "path/to/file_with_colons.json"),
-        ("normal_file.json", "normal_file.json"),
+        "C:\\Users\\test\\file.json",
+        ".arkitekt/cache/C:\\test\\file.json",
+        "path/to/file:with:colons.json",
+        "normal_file.json",
     ]
     
-    for input_path, expected_filename_pattern in test_cases:
+    for input_path in test_cases:
         sanitized = cache._sanitize_cache_path(input_path)
         # Check that the sanitized filename doesn't contain invalid characters
         filename = os.path.basename(sanitized)

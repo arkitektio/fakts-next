@@ -68,7 +68,7 @@ class FileCache(pydantic.BaseModel):
         """Sanitize the cache file path to ensure it's valid across platforms.
         
         This method ensures that:
-        1. The parent directory exists
+        1. The parent directory exists (only when creating directories)
         2. The filename doesn't contain invalid characters (e.g., colons, backslashes on Windows)
         
         Parameters
@@ -86,19 +86,27 @@ class FileCache(pydantic.BaseModel):
         filename = os.path.basename(path)
         
         # Sanitize the filename by replacing invalid characters
-        # On Windows, the following characters are invalid: < > : " / \ | ? *
-        # We'll replace them with underscores to make the filename valid
-        sanitized_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-        
-        # Ensure the directory exists
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory, exist_ok=True)
+        # On Windows, the following characters are invalid in filenames: < > : " \ | ? *
+        # Note: Forward slash (/) is not included as it's already handled by directory/filename split
+        sanitized_filename = re.sub(r'[<>:"\\|?*]', '_', filename)
         
         # Reconstruct the path
         if directory:
             return os.path.join(directory, sanitized_filename)
         else:
             return sanitized_filename
+    
+    def _ensure_cache_directory(self, path: str) -> None:
+        """Ensure the cache directory exists.
+        
+        Parameters
+        ----------
+        path : str
+            The cache file path
+        """
+        directory = os.path.dirname(path)
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
 
     async def aload(self) -> Optional[ActiveFakts]:
         """Loads the configuration from the grant
@@ -156,6 +164,9 @@ class FileCache(pydantic.BaseModel):
 
         cache = CacheFile(fakts=value, created=datetime.datetime.now(), hash=self.hash)
         sanitized_path = self._sanitize_cache_path(self.cache_file)
+        
+        # Ensure directory exists before writing
+        self._ensure_cache_directory(sanitized_path)
 
         with open(sanitized_path, "w+") as f:
             json.dump(json.loads(cache.model_dump_json()), f)
