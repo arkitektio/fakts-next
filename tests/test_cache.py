@@ -130,17 +130,29 @@ def test_cache_sanitize_method():
     cache = FileCache()
     
     # Test various paths with invalid characters
+    # These test all the invalid characters that should be replaced: < > : " \ | ? *
     test_cases = [
-        "C:\\Users\\test\\file.json",
-        ".arkitekt/cache/C:\\test\\file.json",
-        "path/to/file:with:colons.json",
-        "normal_file.json",
+        "C:\\Users\\test\\file.json",  # Backslashes and colon
+        ".arkitekt/cache/C:\\test\\file.json",  # Mixed path with Windows separator
+        "path/to/file:with:colons.json",  # Colons
+        "file<with>angle.json",  # Angle brackets
+        "file|with|pipe.json",  # Pipe
+        "file?with?question.json",  # Question marks
+        'file"with"quotes.json',  # Double quotes
+        "file*with*asterisk.json",  # Asterisks
+        "normal_file.json",  # Normal filename (should not be changed)
     ]
     
     for input_path in test_cases:
         sanitized = cache._sanitize_cache_path(input_path)
-        # Check that the sanitized filename doesn't contain invalid characters
+        # Check that the sanitized filename doesn't contain any invalid characters
         filename = os.path.basename(sanitized)
         assert ":" not in filename, f"Colon found in sanitized filename: {filename}"
         assert "\\" not in filename, f"Backslash found in sanitized filename: {filename}"
+        assert "<" not in filename, f"< found in sanitized filename: {filename}"
+        assert ">" not in filename, f"> found in sanitized filename: {filename}"
+        assert "|" not in filename, f"| found in sanitized filename: {filename}"
+        assert "?" not in filename, f"? found in sanitized filename: {filename}"
+        assert '"' not in filename, f'Quote found in sanitized filename: {filename}'
+        assert "*" not in filename, f"* found in sanitized filename: {filename}"
 

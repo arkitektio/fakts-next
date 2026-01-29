@@ -67,9 +67,8 @@ class FileCache(pydantic.BaseModel):
     def _sanitize_cache_path(self, path: str) -> str:
         """Sanitize the cache file path to ensure it's valid across platforms.
         
-        This method ensures that:
-        1. The parent directory exists (only when creating directories)
-        2. The filename doesn't contain invalid characters (e.g., colons, backslashes on Windows)
+        This method sanitizes the filename portion of the path by replacing
+        invalid characters (e.g., colons, backslashes on Windows) with underscores.
         
         Parameters
         ----------
