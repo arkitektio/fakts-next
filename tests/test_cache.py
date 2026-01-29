@@ -1,7 +1,6 @@
 from fakts_next import Fakts
 from fakts_next.cache.file import FileCache
 import os
-import pytest
 import tempfile
 import shutil
 
