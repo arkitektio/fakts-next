@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v3.0.0 (2026-01-24)
+
+### Features
+
+- Fixing tests
+  ([`384eecb`](https://github.com/arkitektio/fakts-next/commit/384eecb28f9d5d250776f396deccf115c5e758d6))
+
+- Updated to work with the latest coordination server
+  ([`5542c22`](https://github.com/arkitektio/fakts-next/commit/5542c2215009cef5835968ce0f3beca3fd621cb5))
+
+
 ## v2.4.0 (2025-11-14)
 
 ### Features
