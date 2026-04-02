@@ -3,9 +3,6 @@ import contextvars
 import json
 import logging
 import ssl
-from os import error
-from pprint import pprint
-from re import A
 from ssl import SSLContext
 from typing import Any, Dict, Optional, Type
 
@@ -128,7 +125,9 @@ class Fakts(KoiledModel):
         default=None, exclude=True, description="The currently loaded token"
     )
 
-    allow_auto_load: bool = Field(default=True, description="Should we autoload on get?")
+    allow_auto_load: bool = Field(
+        default=True, description="Should we autoload on get?"
+    )
     """Should we autoload the grants on a call to get?"""
 
     load_on_enter: bool = False
@@ -184,7 +183,9 @@ class Fakts(KoiledModel):
 
         # Create an OAuth2 session for the OSF
         async with aiohttp.ClientSession(
-            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
+            connector=(
+                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
+            ),
             headers=headers,
         ) as session:
             async with session.post(
@@ -215,7 +216,9 @@ class Fakts(KoiledModel):
 
     async def achallenge_alias(self, alias: Alias) -> bool:
         async with aiohttp.ClientSession(
-            connector=(aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None),
+            connector=(
+                aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
+            ),
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -367,7 +370,9 @@ class Fakts(KoiledModel):
                     break
 
                 try:
-                    challenge_ok = await asyncio.wait_for(self.achallenge_alias(alias), timeout=3)
+                    challenge_ok = await asyncio.wait_for(
+                        self.achallenge_alias(alias), timeout=3
+                    )
                     if challenge_ok:
                         selected_alias = alias
                         break
@@ -376,7 +381,9 @@ class Fakts(KoiledModel):
                         f"Timeout while challenging alias {alias.id} for service {req.key}."
                     )
                 except Exception as e:
-                    errors_in_alias.append(f"Error while challenging alias {alias.id}: {str(e)}")
+                    errors_in_alias.append(
+                        f"Error while challenging alias {alias.to_http_path(alias.challenge)} for service {req.key}: {str(e)}"
+                    )
 
             print(errors_in_alias)
 
@@ -388,8 +395,9 @@ class Fakts(KoiledModel):
                     valid=True,
                 )
             else:
-                error_message = f"All alias challenges failed for service {req.key}. " + " ".join(
-                    errors_in_alias
+                error_message = (
+                    f"All alias challenges failed for service {req.key}. "
+                    + " ".join(errors_in_alias)
                 )
                 if req.optional:
                     self.report_map[req.key] = AliasReport(
@@ -415,7 +423,9 @@ class Fakts(KoiledModel):
 
             async with aiohttp.ClientSession(
                 connector=(
-                    aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
+                    aiohttp.TCPConnector(ssl=self.ssl_context)
+                    if self.ssl_context
+                    else None
                 ),
                 headers={
                     "Accept": "application/json",
@@ -430,7 +440,9 @@ class Fakts(KoiledModel):
                     # Check status code
                     print("Reporting usage, got response:", data)
                     if resp.status != 200:
-                        raise Exception(f"Failed to report usage with status code {resp.status}")
+                        raise Exception(
+                            f"Failed to report usage with status code {resp.status}"
+                        )
 
         if composition_errors:
             joined_errors = "\n".join(composition_errors)
