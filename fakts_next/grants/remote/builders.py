@@ -6,11 +6,10 @@ from fakts_next.grants.remote.discovery.static import StaticDiscovery
 from fakts_next.grants.remote.demanders.static import StaticDemander
 from fakts_next.grants.remote.demanders.redeem import RedeemDemander
 from fakts_next.grants.remote.claimers.post import ClaimEndpointClaimer
-from fakts_next.grants.remote.models import FaktsEndpoint, FaktValue
-from typing import Dict
+from fakts_next.grants.remote.models import FaktsEndpoint, ActiveFakts
 
 
-def build_remote_testing(value: Dict[str, FaktValue]) -> RemoteGrant:
+def build_remote_testing(value: ActiveFakts) -> RemoteGrant:
     """Builds a remote grant for testing purposes
 
     Will always return the same value when claiming.
@@ -27,7 +26,9 @@ def build_remote_testing(value: Dict[str, FaktValue]) -> RemoteGrant:
 
     """
     return RemoteGrant(
-        discovery=StaticDiscovery(endpoint=FaktsEndpoint(base_url="https://example.com")),
+        discovery=StaticDiscovery(
+            endpoint=FaktsEndpoint(base_url="https://example.com")
+        ),
         claimer=StaticClaimer(value=value),
         demander=StaticDemander(token="token"),  # type: ignore
     )

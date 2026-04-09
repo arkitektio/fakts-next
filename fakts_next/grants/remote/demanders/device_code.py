@@ -88,12 +88,10 @@ class DeviceCodeDemander(BaseModel):
 
     device_code_hook: DeviceCodeHook = Field(
         default=display_in_terminal,
-        examples=True,
         description="A callback function that is called when the device code is retrieved",
     )
     granted_hook: GrantedHook = Field(
         default=granted_in_terminal,
-        examples=True,
         description="A callback function that is called when the device code is granted",
     )
 

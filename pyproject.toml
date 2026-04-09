@@ -49,42 +49,6 @@ markers = [
     "network: marks tests that require a network connection",
 ]
 
-[tool.mypy]
-exclude = ["venv/", "tests/", "examples/"]
-ignore_missing_imports = true
-
-[tool.ruff]
-extend-select = ["ANN", "D1"]
-extend-ignore = ["ANN101", "ANN002", "ANN003", "D100", "ANN401"]
-
-# Exclude a variety of commonly ignored directories.
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
-    "tests",
-    "examples",
-]
-
-# Same as Black.
-line-length = 100
 
 [[tool.pydoc-markdown.loaders]]
 type = "python"

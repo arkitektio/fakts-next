@@ -106,7 +106,7 @@ class FileCache(pydantic.BaseModel):
 
                 return cache.fakts
 
-    async def aset(self, value: ActiveFakts):
+    async def aset(self, value: ActiveFakts) -> None:
         """Refreshes the configuration from the grant
 
         This function is used to refresh the configuration from the grant.
@@ -121,7 +121,7 @@ class FileCache(pydantic.BaseModel):
         with open(self.cache_file, "w+") as f:
             json.dump(json.loads(cache.model_dump_json()), f)
 
-    async def areset(self):
+    async def areset(self) -> None:
         """Resets the cache
 
         This function is used to reset the cache.

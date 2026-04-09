@@ -1,4 +1,3 @@
-from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import List, Optional
 import json
@@ -105,6 +104,7 @@ class SelfFakt(BaseModel):
     """SelfFakt is a special kind of Fakt that is used to identify the Fakts server itself"""
 
     deployment_name: str
+    alias: Alias
 
 
 class ActiveFakts(BaseModel):

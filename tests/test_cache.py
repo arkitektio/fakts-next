@@ -12,7 +12,7 @@ TESTS_FOLDER = str(os.path.dirname(os.path.abspath(__file__)))
 def test_cache():
     grant = HardFaktsGrant(
         fakts=ActiveFakts(
-            self=SelfFakt(deployment_name="test_deployment"),
+            self=SelfFakt(deployment_name="test_deployment", alias=Alias(id="test", host="localhost", port=8000, path="/test")),
             auth=AuthFakt(
                 client_id="test_client_id",
                 client_secret="test_client",

@@ -1,5 +1,4 @@
 from pydantic import Field
-from typing import Any, Dict
 from fakts_next.grants.remote.models import FaktsEndpoint, ActiveFakts
 from pydantic import BaseModel
 

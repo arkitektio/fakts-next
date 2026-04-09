@@ -1,6 +1,5 @@
 from dokker import Deployment
 from fakts_next import Fakts
-from fakts_next.cache.file import FileCache
 import os
 from fakts_next.cache.nocache import NoCache
 from fakts_next.grants.remote.base import RemoteGrant

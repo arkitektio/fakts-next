@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Optional
 from fakts_next.models import ActiveFakts
 from fakts_next.protocols import FaktsCache
 
@@ -28,7 +28,7 @@ class NoCache(FaktsCache):
 
         return None
 
-    async def aset(self, value: ActiveFakts):
+    async def aset(self, value: ActiveFakts) -> None:
         """Refreshes the configuration from the grant
 
         This function is used to refresh the configuration from the grant.
@@ -40,7 +40,7 @@ class NoCache(FaktsCache):
 
         pass
 
-    async def areset(self):
+    async def areset(self) -> None:
         """Resets the cache
 
         This function is used to reset the cache.

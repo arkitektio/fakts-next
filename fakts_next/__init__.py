@@ -19,6 +19,7 @@ safe and secure configuration management.
 from .fakts import Fakts, FaktsGrant, get_current_fakts_next
 from .errors import FaktsError
 from .grants import EnvGrant, GrantError
+from .helpers import afakt, fakt
 
 
 __all__ = [
@@ -28,4 +29,6 @@ __all__ = [
     "GrantError",
     "get_current_fakts_next",
     "FaktsError",
+    "afakt",
+    "fakt",
 ]

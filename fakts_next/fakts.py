@@ -1,6 +1,5 @@
 import asyncio
 import contextvars
-import json
 import logging
 import ssl
 from ssl import SSLContext
@@ -376,7 +375,7 @@ class Fakts(KoiledModel):
                     if challenge_ok:
                         selected_alias = alias
                         break
-                except asyncio.TimeoutError as e:
+                except asyncio.TimeoutError:
                     errors_in_alias.append(
                         f"Timeout while challenging alias {alias.id} for service {req.key}."
                     )
@@ -495,6 +494,75 @@ class Fakts(KoiledModel):
             f"Alias for key {fakts_key} not found in alias map. Available aliases: {', '.join(self.alias_map.keys())}"
         )
         return self.alias_map[fakts_key]
+
+    async def aget_self_alias(
+        self,
+        omit_challenge: bool = False,
+        omit_report: bool = True,
+        cache: bool = True,
+        store: bool = True,
+    ) -> Alias:
+        """Get Fakt Value (async)
+
+        Gets the currently active configuration for the group_name, by loading it from
+        the grant if it is not already loaded.
+
+        Steps:
+            1. Acquire lock
+            2. If not yet loaded and auto_load is True, load
+            4. Return groups fakts
+
+        Args:
+            group_name (str): The group name in the fakts
+            auto_load (bool, optional): Should we autoload the configuration
+                                        if nothing has been set? Defaults to True.
+            force_refresh (bool, optional): Should we force a refresh of the grants.
+                                            Grants can decide their own refresh logic?
+                                            Defaults to False.
+
+        Returns:
+            dict: The active fakts
+        """
+        assert self._alias_lock is not None, (
+            "You need to enter the context first before calling this function"
+        )
+        async with self._alias_lock:
+            if not self.loaded_fakts:
+                # If we don't have the alias in the map, we need to refresh it
+                try:
+                    await self.refresh_aliases(
+                        omit_challenge=omit_challenge, omit_report=omit_report
+                    )
+                except GroupNotFound as e:
+                    logger.error(e, exc_info=True)
+                    raise e
+
+        assert self.loaded_fakts is not None, (
+            "No fakts loaded yet. Please call load() first."
+        )
+
+        return self.loaded_fakts.self.alias
+
+    def get_self_alias(
+        self,
+        omit_challenge: bool = False,
+        omit_report: bool = True,
+        cache: bool = True,
+        store: bool = True,
+    ) -> Alias:
+        """Get Self Alias (sync)
+
+        Gets the currently active configuration for the group_name, by loading it from
+        the grant if it is not already loaded.
+
+        """
+        return unkoil(
+            self.aget_self_alias,
+            omit_challenge=omit_challenge,
+            omit_report=omit_report,
+            cache=cache,
+            store=store,
+        )
 
     def get_alias(
         self,
