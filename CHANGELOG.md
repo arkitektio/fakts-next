@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v3.1.0 (2026-04-09)
+
+### Features
+
+- Add self alias
+  ([`bd5911c`](https://github.com/arkitektio/fakts-next/commit/bd5911c764c87db821a4f028dc28c7ee69d86e07))
+
+
 ## v3.0.0 (2026-01-24)
 
 ### Features
