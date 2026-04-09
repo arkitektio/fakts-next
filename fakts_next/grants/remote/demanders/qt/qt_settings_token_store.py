@@ -29,7 +29,9 @@ class QTSettingTokenStore(BaseModel):
     save_key: str
     """The key to use to store the tokens"""
 
-    async def aput_default_token_for_endpoint(self, endpoint: FaktsEndpoint, token: str) -> None:
+    async def aput_default_token_for_endpoint(
+        self, endpoint: FaktsEndpoint, token: str
+    ) -> None:
         """A function that puts the default token for an endpoint
         from the settings
 
@@ -48,7 +50,7 @@ class QTSettingTokenStore(BaseModel):
             try:
                 storage = EndpointDefaults(**json.loads(un_storage))  # type: ignore
             except Exception as e:
-                print("Error loading token store", e)
+                logger.warning("Error loading token store, using default", e)
                 storage = EndpointDefaults()
 
         if endpoint.base_url in storage.default_token:
@@ -58,7 +60,9 @@ class QTSettingTokenStore(BaseModel):
 
         self.settings.setValue(self.save_key, storage.model_dump_json())  # type: ignore
 
-    async def aget_default_token_for_endpoint(self, endpoint: FaktsEndpoint) -> Optional[str]:
+    async def aget_default_token_for_endpoint(
+        self, endpoint: FaktsEndpoint
+    ) -> Optional[str]:
         """A function that gets the default token for an endpoint
         from the settings
 
@@ -81,7 +85,7 @@ class QTSettingTokenStore(BaseModel):
             if endpoint.base_url in storage.default_token:
                 return storage.default_token[endpoint.base_url]
         except Exception as e:
-            print(e)
+            logger.warning("Error loading token store, using default", e)
             return None
 
         return None

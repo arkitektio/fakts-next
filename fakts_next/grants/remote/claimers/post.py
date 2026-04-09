@@ -76,7 +76,6 @@ class ClaimEndpointClaimer(BaseModel):
                         raise ClaimError(data["message"])
                     if status == "granted":
                         fakts = ActiveFakts(**data["config"])
-                        print("Claimed configuration:", fakts)
                         return fakts
                     if status == "denied":
                         raise ClaimError("Access denied")

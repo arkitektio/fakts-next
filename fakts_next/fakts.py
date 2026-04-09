@@ -1,6 +1,7 @@
 import asyncio
 import contextvars
 import logging
+from os import error
 import ssl
 from ssl import SSLContext
 from typing import Any, Dict, Optional, Type
@@ -119,6 +120,11 @@ class Fakts(KoiledModel):
         exclude=True,
         description="Map of service names to errors encountered during alias challenges",
     )
+    error_map: Dict[str, str] = Field(
+        default_factory=dict,
+        exclude=True,
+        description="Map of service names to errors encountered during alias challenges",
+    )
 
     loaded_token: Optional[str] = Field(
         default=None, exclude=True, description="The currently loaded token"
@@ -178,7 +184,7 @@ class Fakts(KoiledModel):
 
         data = dict(urldecode(body))
 
-        print("Challening for token with data:", data, token_url)
+        logger.debug("Challening for token with data %s and headers %s", data, headers)
 
         # Create an OAuth2 session for the OSF
         async with aiohttp.ClientSession(
@@ -314,12 +320,12 @@ class Fakts(KoiledModel):
                     raise e
 
         assert self.loaded_fakts, "No fakts loaded yet. Please call load() first."
-        print(self.loaded_fakts)
         self.alias_map = {}
         self.report_map = {}
+        self.error_map = {}
         composition_errors = []
 
-        for req in self.manifest.requirements:
+        for req in self.manifest.requirements or []:
             instance = self.loaded_fakts.instances.get(req.key)
             if not instance:
                 if req.optional:
@@ -384,8 +390,6 @@ class Fakts(KoiledModel):
                         f"Error while challenging alias {alias.to_http_path(alias.challenge)} for service {req.key}: {str(e)}"
                     )
 
-            print(errors_in_alias)
-
             if selected_alias:
                 self.alias_map[req.key] = selected_alias
                 self.report_map[req.key] = AliasReport(
@@ -418,7 +422,7 @@ class Fakts(KoiledModel):
                 alias_reports=self.report_map,
                 functional=len(composition_errors) == 0,
             )
-            print("Reporting usage:", report)
+            logger.debug("Reporting usage: %s", report)
 
             async with aiohttp.ClientSession(
                 connector=(
@@ -437,7 +441,7 @@ class Fakts(KoiledModel):
                 ) as resp:
                     data = await resp.json()
                     # Check status code
-                    print("Reporting usage, got response:", data)
+                    logger.debug("Reporting usage, got response: %s", data)
                     if resp.status != 200:
                         raise Exception(
                             f"Failed to report usage with status code {resp.status}"

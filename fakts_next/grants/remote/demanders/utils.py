@@ -14,7 +14,7 @@ async def acheck_supported_layers(endpoint: FaktsEndpoint) -> List[str]:
     if endpoint.layers:
         logger.debug(f"Checking supported layers for {endpoint.name}")
         for layer in endpoint.layers:
-            print(f"Checking layer {layer}")
+            logger.debug(f"Checking layer {layer}")
             if layer.get_probe:
                 # check if we access to the web layer
                 async with aiohttp.ClientSession() as session:
@@ -31,13 +31,12 @@ async def acheck_supported_layers(endpoint: FaktsEndpoint) -> List[str]:
                 try:
                     socket.gethostbyname(layer.dns_probe)
                 except Exception as e:
-                    print(f"Could not access headscale layer: {e}")
                     logger.debug(f"Could not access headscale layer: {e}")
                     continue
 
             supported_layers.append(layer.identifier)
 
-    print("Supported layers", supported_layers)
+    logger.debug("Supported layers: %s", supported_layers)
 
     return supported_layers
 
