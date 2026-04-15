@@ -1,7 +1,15 @@
 # CHANGELOG
 
 
+## v3.1.2 (2026-04-15)
+
+
 ## v3.1.1 (2026-04-09)
+
+### Bug Fixes
+
+- Device code link
+  ([`42f0dd5`](https://github.com/arkitektio/fakts-next/commit/42f0dd503fd315d53e78d46fdaf46cb2388b41a7))
 
 
 ## v3.1.0 (2026-04-09)
