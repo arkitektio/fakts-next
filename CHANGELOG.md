@@ -1,7 +1,15 @@
 # CHANGELOG
 
 
+## v3.1.1 (2026-04-09)
+
+
 ## v3.1.0 (2026-04-09)
+
+### Bug Fixes
+
+- Remove unnecessary prints
+  ([`1dc603c`](https://github.com/arkitektio/fakts-next/commit/1dc603c6ca08dd8283e5b1dd41096cc2958cbe30))
 
 ### Features
 
