@@ -35,8 +35,8 @@ async def display_in_terminal(endpoint: "FaktsEndpoint", code: str) -> None:
     webbrowser.open_new(endpoint.base_url.replace("lok/f/", "") + "configure/" + code)
 
     print_device_code_prompt(
-        endpoint.base_url + "configure/?" + querystring,
-        endpoint.base_url + "device",
+        endpoint.base_url.replace("lok/f/", "") + "configure/" + code,
+        endpoint.base_url.replace("lok/f/", "") + "device",
         code,
     )
 
