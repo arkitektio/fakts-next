@@ -1,7 +1,6 @@
 import asyncio
 import contextvars
 import logging
-from os import error
 import ssl
 from ssl import SSLContext
 from typing import Any, Dict, Optional, Type
@@ -149,7 +148,6 @@ class Fakts(KoiledModel):
 
     async def arefresh_token(self, allow_refresh: bool = True) -> str:
         """Refresh the authentication token for a service (async)"""
-        """Get Authentikation Token for a service (async)"""
         assert self._lock is not None, (
             "You need to enter the context first before calling this function"
         )
@@ -202,6 +200,7 @@ class Fakts(KoiledModel):
                 ),
             ) as resp:
                 text = await resp.text()
+                logger.debug(text)
 
                 try:
                     auth_client.parse_request_body_response(text, scope=scope)
@@ -244,8 +243,7 @@ class Fakts(KoiledModel):
         return False
 
     async def aget_token(self) -> str:
-        """Refresh the authentication token for a service (async)"""
-        """Get Authentikation Token for a service (async)"""
+        """Get the authentication token for a service (async)"""
         assert self._token_lock is not None, (
             "You need to enter the context first before calling this function"
         )
@@ -456,29 +454,19 @@ class Fakts(KoiledModel):
         fakts_key: Optional[str] = None,
         omit_challenge: bool = False,
         omit_report: bool = True,
-        cache: bool = True,
-        store: bool = True,
     ) -> Alias:
-        """Get Fakt Value (async)
+        """Get the alias for a service key (async)
 
-        Gets the currently active configuration for the group_name, by loading it from
-        the grant if it is not already loaded.
-
-        Steps:
-            1. Acquire lock
-            2. If not yet loaded and auto_load is True, load
-            4. Return groups fakts
+        Returns the active alias for ``fakts_key``, refreshing the aliases
+        from the loaded configuration if the key is not yet in the alias map.
 
         Args:
-            group_name (str): The group name in the fakts
-            auto_load (bool, optional): Should we autoload the configuration
-                                        if nothing has been set? Defaults to True.
-            force_refresh (bool, optional): Should we force a refresh of the grants.
-                                            Grants can decide their own refresh logic?
-                                            Defaults to False.
+            fakts_key (str, optional): The service key to look up in the alias map.
+            omit_challenge (bool, optional): Skip the alias challenge. Defaults to False.
+            omit_report (bool, optional): Skip reporting alias errors. Defaults to True.
 
         Returns:
-            dict: The active fakts
+            Alias: The active alias for the given key.
         """
         assert self._alias_lock is not None, (
             "You need to enter the context first before calling this function"
@@ -503,29 +491,18 @@ class Fakts(KoiledModel):
         self,
         omit_challenge: bool = False,
         omit_report: bool = True,
-        cache: bool = True,
-        store: bool = True,
     ) -> Alias:
-        """Get Fakt Value (async)
+        """Get the alias for the application itself (async)
 
-        Gets the currently active configuration for the group_name, by loading it from
-        the grant if it is not already loaded.
-
-        Steps:
-            1. Acquire lock
-            2. If not yet loaded and auto_load is True, load
-            4. Return groups fakts
+        Returns the active alias for this application, loading the
+        configuration first if it is not already loaded.
 
         Args:
-            group_name (str): The group name in the fakts
-            auto_load (bool, optional): Should we autoload the configuration
-                                        if nothing has been set? Defaults to True.
-            force_refresh (bool, optional): Should we force a refresh of the grants.
-                                            Grants can decide their own refresh logic?
-                                            Defaults to False.
+            omit_challenge (bool, optional): Skip the alias challenge. Defaults to False.
+            omit_report (bool, optional): Skip reporting alias errors. Defaults to True.
 
         Returns:
-            dict: The active fakts
+            Alias: The active alias for this application.
         """
         assert self._alias_lock is not None, (
             "You need to enter the context first before calling this function"
@@ -551,57 +528,38 @@ class Fakts(KoiledModel):
         self,
         omit_challenge: bool = False,
         omit_report: bool = True,
-        cache: bool = True,
-        store: bool = True,
     ) -> Alias:
-        """Get Self Alias (sync)
+        """Get the alias for the application itself (sync)
 
-        Gets the currently active configuration for the group_name, by loading it from
-        the grant if it is not already loaded.
-
+        Synchronous wrapper around :meth:`aget_self_alias`.
         """
         return unkoil(
             self.aget_self_alias,
             omit_challenge=omit_challenge,
             omit_report=omit_report,
-            cache=cache,
-            store=store,
         )
 
     def get_alias(
         self,
         fakts_key: Optional[str] = None,
-        cache: bool = True,
         omit_challenge: bool = False,
         omit_report: bool = True,
-        store: bool = True,
     ) -> Alias:
-        """Get Fakt Value (sync)
+        """Get the alias for a service key (sync)
 
-        Gets the currently active configuration for the group_name, by loading it from
-        the grant if it is not already loaded.
-
-        Steps:
-            1. Acquire lock
-            2. If not yet loaded and auto_load is True, load
-            4. Return groups fakts
+        Synchronous wrapper around :meth:`aget_alias`.
 
         Args:
-            group_name (str): The group name in the fakts
-            auto_load (bool, optional): Should we autoload the configuration
-                                        if nothing has been set? Defaults to True.
-            force_refresh (bool, optional): Should we force a refresh of the grants.
-                                            Grants can decide their own refresh logic?
-                                            Defaults to False.
+            fakts_key (str, optional): The service key to look up in the alias map.
+            omit_challenge (bool, optional): Skip the alias challenge. Defaults to False.
+            omit_report (bool, optional): Skip reporting alias errors. Defaults to True.
 
         Returns:
-            dict: The active fakts
+            Alias: The active alias for the given key.
         """
         return unkoil(
             self.aget_alias,
             fakts_key,
-            cache=cache,
-            store=store,
             omit_challenge=omit_challenge,
             omit_report=omit_report,
         )

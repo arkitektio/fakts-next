@@ -1,15 +1,14 @@
-import ssl
-import certifi
-from pydantic import ConfigDict, Field, BaseModel
+from pydantic import Field
 import logging
 from typing import List
 from .utils import discover_url
 from fakts_next.grants.remote import FaktsEndpoint
+from fakts_next.grants.remote.models import SSLContextModel
 
 logger = logging.getLogger(__name__)
 
 
-class WellKnownDiscovery(BaseModel):
+class WellKnownDiscovery(SSLContextModel):
     """A discovery that uses the well-known endpoint
 
     A well-known endpoint is a special endpoint that is used to discover
@@ -23,14 +22,8 @@ class WellKnownDiscovery(BaseModel):
 
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     url: str
     """The url of the well-known endpoint"""
-    ssl_context: ssl.SSLContext = Field(
-        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
-        exclude=True,
-    )
-    """ An ssl context to use for the connection to the endpoint"""
     allow_appending_slash: bool = Field(
         default=True,
         description="If the url does not end with a slash, should we append one? ",

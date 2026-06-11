@@ -1,14 +1,12 @@
 from typing import Dict, AsyncGenerator, List, Tuple, Set
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import Field, field_validator
 from socket import AF_INET, IPPROTO_UDP
 import asyncio
 import json
 import logging
 from pydantic import BaseModel
-import ssl
-import certifi
 from .utils import discover_url
-from fakts_next.grants.remote.models import FaktsEndpoint
+from fakts_next.grants.remote.models import FaktsEndpoint, SSLContextModel
 from fakts_next.grants.remote.errors import DiscoveryError
 
 logger = logging.getLogger(__name__)
@@ -178,25 +176,19 @@ async def alisten_pure(bind: ListenBinding, strict: bool = False) -> AsyncGenera
     return
 
 
-class FirstAdvertisedDiscovery(BaseModel):
+class FirstAdvertisedDiscovery(SSLContextModel):
     """A discovery that will return the first endpoint that is advertised
 
     This discovery will listen on a broadcast port for beacons.
     It will then try to connect to the endpoint and return it.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     binding: ListenBinding = Field(default_factory=ListenBinding)
     """The address to bind to"""
     strict: bool = False
     """Should we error on bad Beacons"""
     discovered_endpoints: Dict[str, FaktsEndpoint] = Field(default_factory=dict)
     """A cache of discovered endpoints"""
-    ssl_context: ssl.SSLContext = Field(
-        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
-        exclude=True,
-    )
-    """ An ssl context to use for the connection to the endpoint"""
     allow_appending_slash: bool = Field(
         default=True,
         description="If the url does not end with a slash, should we append one? ",

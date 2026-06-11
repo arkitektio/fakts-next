@@ -1,5 +1,5 @@
 from fakts_next.models import ActiveFakts
-from ..errors import GrantError
+from .errors import RemoteGrantError
 import logging
 
 from .models import Demander, Discovery, Claimer
@@ -10,10 +10,6 @@ logger = logging.getLogger(__name__)
 
 Token = str
 EndpointUrl = str
-
-
-class RemoteGrantError(GrantError):
-    """Base class for all remotegrant errors"""
 
 
 class RemoteGrant(BaseModel):

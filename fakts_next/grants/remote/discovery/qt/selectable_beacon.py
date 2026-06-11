@@ -8,14 +8,11 @@ import asyncio
 import logging
 from koil.qt import qt_to_async, QtFuture
 from fakts_next.grants.remote.discovery.utils import discover_url
-from pydantic import BaseModel, ConfigDict
 from typing import Any, Optional
 from typing import Dict, List
 
 from pydantic import Field
-import ssl
-import certifi
-from fakts_next.grants.remote.models import FaktsEndpoint
+from fakts_next.grants.remote.models import FaktsEndpoint, SSLContextModel
 
 
 logger = logging.getLogger(__name__)
@@ -310,24 +307,18 @@ async def wait_first(*tasks) -> Any:  # type: ignore
         return task.result()  # type: ignore
 
 
-class QtSelectableDiscovery(BaseModel):
+class QtSelectableDiscovery(SSLContextModel):
     """A QT based discovery that will cause the user to select an endpoint
     from a list of network discovered endpoints, as well as endpoints
     that the user manually enters.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     binding: ListenBinding = Field(default_factory=ListenBinding)
     """The address to bind to"""
     strict: bool = False
     """Should we error on bad Beacons"""
     discovered_endpoints: Dict[str, FaktsEndpoint] = Field(default_factory=dict)
     """A cache of discovered endpoints"""
-    ssl_context: ssl.SSLContext = Field(
-        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
-        exclude=True,
-    )
-    """ An ssl context to use for the connection to the endpoint"""
     allow_appending_slash: bool = Field(
         default=True,
         description="If the url does not end with a slash, should we append one? ",

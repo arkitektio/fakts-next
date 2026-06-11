@@ -1,11 +1,9 @@
 import aiohttp
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 import logging
 from fakts_next.grants.remote.errors import DemandError
-from fakts_next.grants.remote.models import FaktsEndpoint
-import ssl
-import certifi
+from fakts_next.grants.remote.models import FaktsEndpoint, SSLContextModel
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +14,7 @@ class RetrieveError(DemandError):
     pass
 
 
-class RetrieveDemander(BaseModel):
+class RetrieveDemander(SSLContextModel):
     """Retrieve Demander
 
     A retrieve grant is a remote grant can be used to retrieve a token and a configuration from a fakts_next server, by claiming to be an already
@@ -25,14 +23,6 @@ class RetrieveDemander(BaseModel):
     on the fakts_next server.
 
     """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    ssl_context: ssl.SSLContext = Field(
-        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
-        exclude=True,
-    )
-    """ An ssl context to use for the connection to the endpoint"""
 
     manifest: BaseModel
     """ The manifest of the application that is requesting the token"""

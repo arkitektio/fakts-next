@@ -1,15 +1,13 @@
 import asyncio
 from http import HTTPStatus
-from urllib.parse import urlencode
 import webbrowser
 import aiohttp
 import time
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 from fakts_next.grants.remote import FaktsEndpoint
+from fakts_next.grants.remote.models import SSLContextModel
 from fakts_next.grants.remote.errors import DemandError
 
-import ssl
-import certifi
 from typing import Awaitable, Callable, List
 from enum import Enum
 from .utils import (
@@ -25,13 +23,6 @@ GrantedHook = Callable[["FaktsEndpoint", str], Awaitable[None]]
 
 async def display_in_terminal(endpoint: "FaktsEndpoint", code: str) -> None:
     """A default hook that does nothing"""
-    querystring = urlencode(
-        {
-            "device_code": code,
-            "grant": "device_code",
-        }
-    )
-
     webbrowser.open_new(endpoint.base_url.replace("lok/f/", "") + "configure/" + code)
 
     print_device_code_prompt(
@@ -68,7 +59,7 @@ class ClientKind(str, Enum):
     DESKTOP = "desktop"
 
 
-class DeviceCodeDemander(BaseModel):
+class DeviceCodeDemander(SSLContextModel):
     """Device Code Grant
 
     The device code grant is a remote grant that is able to newly establish an application
@@ -84,8 +75,6 @@ class DeviceCodeDemander(BaseModel):
 
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     device_code_hook: DeviceCodeHook = Field(
         default=display_in_terminal,
         description="A callback function that is called when the device code is retrieved",
@@ -95,12 +84,8 @@ class DeviceCodeDemander(BaseModel):
         description="A callback function that is called when the device code is granted",
     )
 
-    ssl_context: ssl.SSLContext = Field(
-        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
-        exclude=True,
-    )
     manifest: BaseModel
-    """ An ssl context to use for the connection to the endpoint"""
+    """ The manifest of the application that is requesting the token"""
     expiration_time_seconds: int = Field(
         default=300, description="The expiration time of the token in seconds"
     )

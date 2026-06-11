@@ -1,15 +1,11 @@
-from pydantic import ConfigDict, Field
-import ssl
-import certifi
 import aiohttp
 from fakts_next.grants.remote.errors import ClaimError
-from fakts_next.grants.remote.models import FaktsEndpoint
-from pydantic import BaseModel
+from fakts_next.grants.remote.models import FaktsEndpoint, SSLContextModel
 
 from fakts_next.models import ActiveFakts
 
 
-class ClaimEndpointClaimer(BaseModel):
+class ClaimEndpointClaimer(SSLContextModel):
     """A claimer that claims the configuration from the endpoint
 
     This claimer is used to claim the configuration from the endpoint.
@@ -18,14 +14,6 @@ class ClaimEndpointClaimer(BaseModel):
 
 
     """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    ssl_context: ssl.SSLContext = Field(
-        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
-        exclude=True,
-    )
-    """ An ssl context to use for the connection to the endpoint"""
 
     async def aclaim(
         self,

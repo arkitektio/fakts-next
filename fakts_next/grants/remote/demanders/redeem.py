@@ -1,22 +1,14 @@
 import aiohttp
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 import logging
-from fakts_next.grants.remote.errors import DemandError
-from fakts_next.grants.remote.models import FaktsEndpoint
-import ssl
-import certifi
+from fakts_next.grants.remote.models import FaktsEndpoint, SSLContextModel
+from fakts_next.grants.remote.demanders.retrieve import RetrieveError
 
 logger = logging.getLogger(__name__)
 
 
-class RetrieveError(DemandError):
-    """A base class for all retrieve errors"""
-
-    pass
-
-
-class RedeemDemander(BaseModel):
+class RedeemDemander(SSLContextModel):
     """Redeem Demander
 
     A reedem grant is a remote grant that can be used to in one shot, create a new client and retrieve a token and a configuration from a fakts_next server.
@@ -25,12 +17,6 @@ class RedeemDemander(BaseModel):
     is not known to the fakts_next server.
 
     """
-
-    ssl_context: ssl.SSLContext = Field(
-        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
-        exclude=True,
-    )
-    """ An ssl context to use for the connection to the endpoint"""
 
     manifest: BaseModel
     """ The manifest of the application that is requesting the token"""
@@ -43,7 +29,6 @@ class RedeemDemander(BaseModel):
         description="The url to use for retrieving the token (overwrited the endpoint url)",
     )
     """The url to use for retrieving the token (overwrited the endpoint url)"""
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     async def ademand(self, endpoint: FaktsEndpoint) -> str:
         """Demand a token from the endpoint
