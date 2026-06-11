@@ -62,7 +62,10 @@ class RemoteGrant(BaseModel):
         try:
             endpoint = await self.discovery.adiscover()
         except Exception as e:
-            raise RemoteGrantError(f"Could not discover endpoint: {e}") from e
+            raise RemoteGrantError(
+                f"Could not discover the Fakts endpoint using "
+                f"{self.discovery.__class__.__name__}: {e}"
+            ) from e
 
         token = await self.demander.ademand(endpoint)
 

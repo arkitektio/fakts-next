@@ -11,13 +11,17 @@ dependencies = [
     "koil>=2.0.4",
     "certifi>=2025.4.26",
     "aiohttp>=3.11.18",
-    "pyyaml>=6.0.2",
     "oauthlib>=3.3.1",
 ]
 
+[project.optional-dependencies]
+qt = ["qtpy>=2.4.3"]
+rath = ["rath>=3.0"]
 
-[project.scripts]
-fakts = "fakts.cli.main:cli"
+[project.urls]
+Homepage = "https://github.com/jhnnsrs/fakts-next"
+Repository = "https://github.com/jhnnsrs/fakts-next"
+Documentation = "https://jhnnsrs.github.io/fakts-next"
 
 [tool.uv]
 dev-dependencies = [
@@ -52,7 +56,7 @@ markers = [
 
 [[tool.pydoc-markdown.loaders]]
 type = "python"
-search_path = ["fakts"]
+search_path = ["fakts_next"]
 
 [tool.pydoc-markdown.renderer]
 type = "docusaurus"

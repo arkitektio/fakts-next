@@ -31,8 +31,12 @@ class FileCache(pydantic.BaseModel):
     You can set the expires_in parameter to set the time in seconds
     for the cache to expire.
 
-    FaktsRequest context parameters:
-        - allow_cache: bool - whether to allow the grant to use the cache
+    Note that the default cache file path is *relative to the current
+    working directory*: running the same app from a different directory
+    will silently miss the cache (and re-run the grant), and two different
+    apps run from the same directory will fight over the same file (their
+    differing hashes invalidate each other on every run). Use an absolute,
+    per-app cache path to avoid both.
 
 
     Attributes
@@ -83,28 +87,27 @@ class FileCache(pydantic.BaseModel):
 
         """
 
-        cache = None
+        if not os.path.exists(self.cache_file):
+            return None
 
-        if os.path.exists(self.cache_file):
+        try:
             with open(self.cache_file, "r") as f:
                 x = json.load(f)
-                try:
-                    cache = CacheFile(**x)
+            cache = CacheFile(**x)
+        except (json.JSONDecodeError, pydantic.ValidationError, OSError) as e:
+            # A corrupt or unreadable cache should never break startup:
+            # treat it as a cache miss and let the grant reload.
+            logger.error(f"Could not load cache file: {e}. Ignoring it")
+            return None
 
-                    if self.hash and cache.hash != self.hash:
-                        cache = None
+        if self.hash and cache.hash != self.hash:
+            return None
 
-                    elif self.expires_in:
-                        if cache.created + datetime.timedelta(seconds=self.expires_in) < datetime.datetime.now():
-                            cache = None
+        if self.expires_in:
+            if cache.created + datetime.timedelta(seconds=self.expires_in) < datetime.datetime.now():
+                return None
 
-                except pydantic.ValidationError as e:
-                    logger.error(f"Could not load cache file: {e}. Ignoring it")
-
-                if cache is None:
-                    return None
-
-                return cache.fakts
+        return cache.fakts
 
     async def aset(self, value: ActiveFakts) -> None:
         """Refreshes the configuration from the grant
@@ -118,8 +121,12 @@ class FileCache(pydantic.BaseModel):
 
         cache = CacheFile(fakts=value, created=datetime.datetime.now(), hash=self.hash)
 
-        with open(self.cache_file, "w+") as f:
-            json.dump(json.loads(cache.model_dump_json()), f)
+        # Write atomically (temp file + rename), so a crash mid-write or a
+        # concurrent writer can never leave a corrupt cache file behind.
+        tmp_file = f"{self.cache_file}.{os.getpid()}.tmp"
+        with open(tmp_file, "w") as f:
+            f.write(cache.model_dump_json())
+        os.replace(tmp_file, self.cache_file)
 
     async def areset(self) -> None:
         """Resets the cache

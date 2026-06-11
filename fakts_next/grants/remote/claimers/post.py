@@ -3,6 +3,7 @@ from fakts_next.grants.remote.errors import ClaimError
 from fakts_next.grants.remote.models import FaktsEndpoint, SSLContextModel
 
 from fakts_next.models import ActiveFakts
+from fakts_next.utils import truncate
 
 
 class ClaimEndpointClaimer(SSLContextModel):
@@ -42,32 +43,63 @@ class ClaimEndpointClaimer(SSLContextModel):
             An error occured while claiming the configuration
         """
 
+        claim_url = f"{endpoint.base_url}claim/"
+
         async with aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(ssl=self.ssl_context)
         ) as session:
             async with session.post(
-                f"{endpoint.base_url}claim/",
+                claim_url,
                 json={
                     "token": token,
                     "secure": endpoint.base_url.startswith("https"),
                 },
             ) as resp:
-                data = await resp.json()
-
                 if resp.status == 200:
-                    data = await resp.json()
+                    try:
+                        data = await resp.json()
+                    except Exception as e:
+                        body = await resp.text()
+                        raise ClaimError(
+                            f"Claiming the configuration from {claim_url} answered "
+                            f"with status 200, but the response is not valid JSON: "
+                            f"{truncate(body) or '<empty>'}"
+                        ) from e
+
                     if "status" not in data:
-                        raise ClaimError("Malformed Answer")
+                        raise ClaimError(
+                            f"Claiming the configuration from {claim_url} answered, "
+                            f"but the response is missing the 'status' field. "
+                            f"Received: {truncate(str(data))}"
+                        )
 
                     status = data["status"]
                     if status == "error":
-                        raise ClaimError(data["message"])
+                        raise ClaimError(
+                            f"The endpoint '{endpoint.name}' at {claim_url} reported "
+                            f"an error while claiming the configuration: "
+                            f"{data.get('message', 'no message provided')}"
+                        )
                     if status == "granted":
                         fakts = ActiveFakts(**data["config"])
                         return fakts
                     if status == "denied":
-                        raise ClaimError("Access denied")
+                        raise ClaimError(
+                            f"The endpoint '{endpoint.name}' at {claim_url} denied the "
+                            f"claim. The claim token may be expired or revoked — "
+                            f"re-registering the app (e.g. by resetting the cache) "
+                            f"should issue a new one."
+                        )
 
-                    raise ClaimError(f"Unexpected status: {status}")
+                    raise ClaimError(
+                        f"Claiming the configuration from {claim_url} answered with "
+                        f"unexpected status '{status}' "
+                        f"(expected 'granted', 'denied' or 'error')."
+                    )
                 else:
-                    raise ClaimError("Error! Coud not claim this app on this endpoint")
+                    body = await resp.text()
+                    raise ClaimError(
+                        f"Could not claim the configuration from {claim_url}: "
+                        f"status code {resp.status}. "
+                        f"Response body: {truncate(body) or '<empty>'}"
+                    )

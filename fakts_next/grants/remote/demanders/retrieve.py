@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 import logging
 from fakts_next.grants.remote.errors import DemandError
 from fakts_next.grants.remote.models import FaktsEndpoint, SSLContextModel
+from fakts_next.utils import truncate
 
 logger = logging.getLogger(__name__)
 
@@ -59,22 +60,46 @@ class RetrieveDemander(SSLContextModel):
                     "manifest": self.manifest.model_dump(),
                 },
             ) as resp:
-                data = await resp.json()
-
                 if resp.status == 200:
-                    data = await resp.json()
+                    try:
+                        data = await resp.json()
+                    except Exception as e:
+                        body = await resp.text()
+                        raise RetrieveError(
+                            f"Retrieving the token from {retrieve_url} answered with "
+                            f"status 200, but the response is not valid JSON: "
+                            f"{truncate(body) or '<empty>'}"
+                        ) from e
+
                     if "status" not in data:
-                        raise RetrieveError("Malformed Answer")
+                        raise RetrieveError(
+                            f"Retrieving the token from {retrieve_url} answered, but "
+                            f"the response is missing the 'status' field. "
+                            f"Received: {truncate(str(data))}"
+                        )
 
                     status = data["status"]
                     if status == "error":
-                        raise RetrieveError(data["message"])
+                        raise RetrieveError(
+                            f"The endpoint '{endpoint.name}' at {retrieve_url} reported "
+                            f"an error while retrieving the token: "
+                            f"{data.get('message', 'no message provided')}. "
+                            f"Is the app registered as a public application on this server?"
+                        )
                     if status == "granted":
                         return data["token"]
 
-                    raise RetrieveError(f"Unexpected status: {status}")
+                    raise RetrieveError(
+                        f"Retrieving the token from {retrieve_url} answered with "
+                        f"unexpected status '{status}' (expected 'granted' or 'error')."
+                    )
                 else:
-                    raise RetrieveError("Error! Coud not claim this app on this endpoint")
+                    body = await resp.text()
+                    raise RetrieveError(
+                        f"Could not retrieve the token from {retrieve_url}: "
+                        f"status code {resp.status}. "
+                        f"Response body: {truncate(body) or '<empty>'}"
+                    )
 
     async def arefresh(self, endpoint: FaktsEndpoint) -> str:
         """Refreshes the token for the given endpoint.

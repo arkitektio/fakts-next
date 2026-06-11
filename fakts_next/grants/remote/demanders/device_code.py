@@ -8,8 +8,9 @@ from fakts_next.grants.remote import FaktsEndpoint
 from fakts_next.grants.remote.models import SSLContextModel
 from fakts_next.grants.remote.errors import DemandError
 
-from typing import Awaitable, Callable, List
+from typing import Awaitable, Callable, List, Optional
 from enum import Enum
+from fakts_next.utils import truncate
 from .utils import (
     acheck_supported_layers,
     print_device_code_prompt,
@@ -22,12 +23,20 @@ GrantedHook = Callable[["FaktsEndpoint", str], Awaitable[None]]
 
 
 async def display_in_terminal(endpoint: "FaktsEndpoint", code: str) -> None:
-    """A default hook that does nothing"""
-    webbrowser.open_new(endpoint.base_url.replace("lok/f/", "") + "configure/" + code)
+    """The default device code hook: open the configure page in a browser
+    and print the URL and code to the terminal."""
+    # Prefer the configure page the server advertises; fall back to the
+    # historical heuristic of deriving it from the base_url.
+    base = endpoint.configure_url or endpoint.base_url.replace("lok/f/", "") + "configure/"
+    if not base.endswith("/"):
+        base += "/"
+    device_url = base.replace("configure/", "device")
+
+    webbrowser.open_new(base + code)
 
     print_device_code_prompt(
-        endpoint.base_url.replace("lok/f/", "") + "configure/" + code,
-        endpoint.base_url.replace("lok/f/", "") + "device",
+        base + code,
+        device_url,
         code,
     )
 
@@ -101,8 +110,9 @@ class DeviceCodeDemander(SSLContextModel):
     )
     """The kind of client that you want to request. Check the ClientKind enum for more information"""
 
-    timeout: int = 60
-    """The timeout for the device code grant in seconds. If the timeout is reached, the grant will fail."""
+    timeout: Optional[int] = None
+    """The timeout for the device code grant in seconds. If the timeout is reached, the grant will fail.
+    Defaults to expiration_time_seconds (giving up exactly when the code expires)."""
 
     open_browser: bool = True
     """If set to True, the URL will be opened in the default browser (if exists). Otherwise the user will be prompted to enter the code manually."""
@@ -139,31 +149,36 @@ class DeviceCodeDemander(SSLContextModel):
         async with aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(ssl=self.ssl_context)
         ) as session:
-            while True:
-                async with session.post(
-                    f"{endpoint.base_url}start/",
-                    json={
-                        "manifest": self.manifest.model_dump(),
-                        "expiration_time_seconds": self.expiration_time_seconds,
-                        "redirect_uris": self.redirect_uris,
-                        "requested_client_kind": self.requested_client_kind,
-                        "supported_layers": await acheck_supported_layers(endpoint),
-                    },
-                ) as response:
-                    if response.status == HTTPStatus.OK:
-                        result = await response.json()
-                        if result["status"] == "granted":
-                            return result["code"]
-
-                        else:
-                            raise DeviceCodeError(
-                                f"Error! Could not retrieve code: {result.get('error', 'Unknown Error')}"
-                            )
+            async with session.post(
+                f"{endpoint.base_url}start/",
+                json={
+                    "manifest": self.manifest.model_dump(),
+                    "expiration_time_seconds": self.expiration_time_seconds,
+                    "redirect_uris": self.redirect_uris,
+                    "requested_client_kind": self.requested_client_kind,
+                    "supported_layers": await acheck_supported_layers(endpoint),
+                },
+            ) as response:
+                if response.status == HTTPStatus.OK:
+                    result = await response.json()
+                    if result["status"] == "granted":
+                        return result["code"]
 
                     else:
                         raise DeviceCodeError(
-                            f"Server Error! Could not retrieve code {await response.text()}"
+                            f"The endpoint '{endpoint.name}' at {endpoint.base_url}start/ "
+                            f"refused to start a device code flow for app "
+                            f"'{getattr(self.manifest, 'identifier', 'unknown')}': "
+                            f"{result.get('error', 'Unknown Error')}"
                         )
+
+                else:
+                    body = await response.text()
+                    raise DeviceCodeError(
+                        f"Could not start the device code flow at {endpoint.base_url}start/: "
+                        f"status code {response.status}. "
+                        f"Response body: {truncate(body) or '<empty>'}"
+                    )
 
     async def ademand(self, endpoint: FaktsEndpoint) -> str:
         """Requests a token from the fakts_next server
@@ -197,6 +212,7 @@ class DeviceCodeDemander(SSLContextModel):
 
         await self.device_code_hook(endpoint, code)
 
+        timeout = self.timeout if self.timeout is not None else self.expiration_time_seconds
         start_time = time.time()
 
         async with aiohttp.ClientSession(
@@ -208,20 +224,15 @@ class DeviceCodeDemander(SSLContextModel):
                 ) as response:
                     if response.status == HTTPStatus.OK:
                         result = await response.json()
-                        if result["status"] == "waiting":
-                            if time.time() - start_time > self.timeout:
+                        if result["status"] in ("waiting", "pending"):
+                            if time.time() - start_time > timeout:
                                 raise DeviceCodeTimeoutError(
-                                    "Timeout for device code grant reached."
+                                    f"The device code '{code}' was not approved within "
+                                    f"{timeout} seconds. Visit the configuration page of "
+                                    f"'{endpoint.name}' and approve the code, or increase "
+                                    f"the demander's timeout."
                                 )
 
-                            await asyncio.sleep(1)
-                            continue
-
-                        if result["status"] == "pending":
-                            if time.time() - start_time > self.timeout:
-                                raise DeviceCodeTimeoutError(
-                                    "Timeout for device code grant reached."
-                                )
                             await asyncio.sleep(1)
                             continue
 
@@ -231,15 +242,24 @@ class DeviceCodeDemander(SSLContextModel):
 
                         if result["status"] == "error":
                             raise DeviceCodeError(
-                                f"Error! Could not retrieve code: {result.get('error', 'Unknown Error')}"
+                                f"The endpoint '{endpoint.name}' at "
+                                f"{endpoint.base_url}challenge/ reported an error for "
+                                f"device code '{code}': "
+                                f"{result.get('error', 'Unknown Error')}"
                             )
 
                         if result["status"] == "denied":
                             raise DeviceCodeError(
-                                f"Denied! The user Denied: {result.get('message', 'Unknown Error')}"
+                                f"The user denied the device code request for app "
+                                f"'{getattr(self.manifest, 'identifier', 'unknown')}' on "
+                                f"'{endpoint.name}': "
+                                f"{result.get('message', 'no message provided')}"
                             )
 
                     else:
+                        body = await response.text()
                         raise DeviceCodeError(
-                            f"Error! Could not retrieve code {await response.text()}"
+                            f"Could not check the device code status at "
+                            f"{endpoint.base_url}challenge/: status code {response.status}. "
+                            f"Response body: {truncate(body) or '<empty>'}"
                         )

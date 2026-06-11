@@ -1,7 +1,28 @@
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from typing import List, Optional
+from typing import Any, List, Optional
 import json
+from enum import Enum
 from hashlib import sha256
+
+
+class GrantStatus(str, Enum):
+    """The grant status of a single service requirement.
+
+    Reported by the server per requirement key, so the client can tell a
+    deliberate denial apart from a service the deployment simply does not
+    offer. Servers that do not support statuses omit them entirely, in
+    which case the status is UNKNOWN (unless an instance was granted,
+    which is unambiguous).
+    """
+
+    GRANTED = "granted"
+    """The user granted access and an instance was composed."""
+    DENIED = "denied"
+    """The user explicitly declined access to this service."""
+    UNAVAILABLE = "unavailable"
+    """The deployment does not offer this service."""
+    UNKNOWN = "unknown"
+    """The server did not report a (known) status for this requirement."""
 
 
 class Alias(BaseModel):
@@ -95,7 +116,9 @@ class AuthFakt(BaseModel):
     client_id: str
     client_secret: str
     token_url: str
-    report_url: str
+    report_url: Optional[str] = None
+    """Where to report the alias resolution outcome. Endpoints that do not
+    support reporting simply omit it, and the client skips the report."""
     scopes: List[str] = Field(default_factory=lambda: ["openid", "profile", "email"])
     """Scopes that this Fakt should request from the user"""
 
@@ -114,6 +137,26 @@ class ActiveFakts(BaseModel):
     """SelfFakt is a special kind of Fakt that is used to identify the Fakts server itself"""
     auth: AuthFakt
     instances: dict[str, Instance] = {}
+    statuses: dict[str, GrantStatus] = {}
+    """Per-requirement grant status as reported by the server (keyed like
+    ``instances``). Optional: servers that do not support statuses omit it,
+    and unknown status values are coerced to UNKNOWN instead of failing
+    validation (so a newer server cannot break older clients)."""
+
+    @field_validator("statuses", mode="before")
+    @classmethod
+    def _coerce_unknown_statuses(cls, v: Any) -> Any:
+        if isinstance(v, dict):
+            known = {status.value for status in GrantStatus}
+            return {
+                key: (
+                    value
+                    if isinstance(value, GrantStatus) or value in known
+                    else GrantStatus.UNKNOWN
+                )
+                for key, value in v.items()
+            }
+        return v
 
 
 class Requirement(BaseModel):
@@ -160,11 +203,11 @@ class Manifest(BaseModel):
     """ Scopes that this app should request from the user """
     logo: Optional[str] = None
     """ A URL to the logo of the app TODO: We should enforce this to be a http URL as local paths won't work """
-    requirements: Optional[List[Requirement]] = Field(default_factory=list)
+    requirements: Optional[List[Requirement]] = Field(default_factory=lambda: [])
     """ Requirements that this app has TODO: What are the requirements? """
     node_id: Optional[str] = None
     """ The node ID of the app instance, will be set automatically to the current node ID """
-    public_sources: Optional[List[PublicSource]] = Field(default_factory=list)
+    public_sources: Optional[List[PublicSource]] = Field(default_factory=lambda: [])
 
     description: Optional[str] = None
     """ A human readable description of the app """
@@ -204,7 +247,12 @@ class Manifest(BaseModel):
         """Check the identifier of the manifest
         This method checks the identifier of the manifest to ensure that it is a valid identifier.
         """
-        assert "/" not in v, "The identifier should not contain a /"
-        assert len(v) > 0, "The identifier should not be empty"
-        assert len(v) < 256, "The identifier should not be longer than 256 characters"
+        if "/" in v:
+            raise ValueError(f"The app identifier must not contain a '/': got '{v}'")
+        if len(v) == 0:
+            raise ValueError("The app identifier must not be empty")
+        if len(v) >= 256:
+            raise ValueError(
+                f"The app identifier must be shorter than 256 characters: got {len(v)} characters"
+            )
         return v

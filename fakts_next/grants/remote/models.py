@@ -46,6 +46,10 @@ class FaktsEndpoint(BaseModel):
     """ A human readable description for the endpoint"""
     retrieve_url: Optional[str] = None
     claim_url: Optional[str] = None
+    configure_url: Optional[str] = None
+    """The user-facing page where a device code can be entered/approved.
+    If the server does not advertise it, clients fall back to deriving it
+    from the base_url."""
     version: Optional[str] = None
     ca_crt: Optional[str] = None
     layers: Optional[List[Layer]] = None
