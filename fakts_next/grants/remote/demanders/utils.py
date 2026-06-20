@@ -1,44 +1,6 @@
 import logging
-from typing import List
-import socket
-import aiohttp
-
-from fakts_next.grants.remote.models import FaktsEndpoint
 
 logger = logging.getLogger(__name__)
-
-
-async def acheck_supported_layers(endpoint: FaktsEndpoint) -> List[str]:
-    supported_layers: list[str] = []
-
-    if endpoint.layers:
-        logger.debug(f"Checking supported layers for {endpoint.name}")
-        for layer in endpoint.layers:
-            logger.debug(f"Checking layer {layer}")
-            if layer.get_probe:
-                # check if we access to the web layer
-                async with aiohttp.ClientSession() as session:
-                    try:
-                        async with session.get(layer.get_probe) as response:
-                            await response.text()
-
-                    except Exception as e:
-                        logger.debug(f"Could not access web layer: {e}")
-                        continue
-
-            if layer.dns_probe:
-                # check if we access to the headscale layer
-                try:
-                    socket.gethostbyname(layer.dns_probe)
-                except Exception as e:
-                    logger.debug(f"Could not access headscale layer: {e}")
-                    continue
-
-            supported_layers.append(layer.identifier)
-
-    logger.debug("Supported layers: %s", supported_layers)
-
-    return supported_layers
 
 
 def could_copy_to_clipboard(text: str) -> bool:

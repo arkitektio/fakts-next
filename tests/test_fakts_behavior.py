@@ -131,7 +131,7 @@ async def test_alias_is_cached_after_first_resolution(monkeypatch: pytest.Monkey
     """After the first full resolution, getting an alias must not challenge again."""
     challenge_count = 0
 
-    async def fake_challenge(self: FaktsClass, alias: Alias) -> bool:
+    async def fake_challenge(self: FaktsClass, alias: Alias, challenge_key: object = None) -> bool:
         nonlocal challenge_count
         challenge_count += 1
         return True
@@ -159,7 +159,7 @@ async def test_last_used_alias_is_moved_to_front_and_persisted(
 ):
     """If a fallback alias is selected, it becomes the preferred alias in the cache."""
 
-    async def fake_challenge(self: FaktsClass, alias: Alias) -> bool:
+    async def fake_challenge(self: FaktsClass, alias: Alias, challenge_key: object = None) -> bool:
         if alias.id == "primary":
             raise Exception("unreachable")
         return True
@@ -183,7 +183,7 @@ async def test_last_used_alias_is_moved_to_front_and_persisted(
 async def test_stale_cache_self_heals(monkeypatch: pytest.MonkeyPatch):
     """If aliases from cached fakts fail, the fakts are reloaded from the grant."""
 
-    async def fake_challenge(self: FaktsClass, alias: Alias) -> bool:
+    async def fake_challenge(self: FaktsClass, alias: Alias, challenge_key: object = None) -> bool:
         if alias.host == "stale-host":
             raise Exception("unreachable")
         return True
@@ -258,7 +258,7 @@ async def test_unreachable_granted_service_is_not_a_grant_problem(
     """A granted but unreachable optional service must not look like a
     declined grant."""
 
-    async def fake_challenge(self: FaktsClass, alias: Alias) -> bool:
+    async def fake_challenge(self: FaktsClass, alias: Alias, challenge_key: object = None) -> bool:
         raise Exception("unreachable")
 
     monkeypatch.setattr(FaktsClass, "achallenge_alias", fake_challenge)
@@ -469,7 +469,7 @@ async def test_load_on_enter():
 async def test_cache_write_failure_is_not_fatal(monkeypatch: pytest.MonkeyPatch):
     """A failing cache write must not break loading or alias resolution."""
 
-    async def fake_challenge(self: FaktsClass, alias: Alias) -> bool:
+    async def fake_challenge(self: FaktsClass, alias: Alias, challenge_key: object = None) -> bool:
         if alias.id == "primary":
             raise Exception("unreachable")
         return True

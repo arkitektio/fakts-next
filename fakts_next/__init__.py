@@ -46,7 +46,14 @@ from .cache.nocache import NoCache
 from .grants import EnvGrant, GrantError, RemoteGrant
 from .grants.remote.builders import build_device_code_fakts, build_redeem_fakts
 from .helpers import afakt, fakt
-from .models import ActiveFakts, Alias, GrantStatus, Manifest, Requirement
+from .models import (
+    ActiveFakts,
+    Alias,
+    ChallengeKey,
+    GrantStatus,
+    Manifest,
+    Requirement,
+)
 
 
 __all__ = [
@@ -63,6 +70,7 @@ __all__ = [
     "NotEnteredError",
     "ActiveFakts",
     "Alias",
+    "ChallengeKey",
     "GrantStatus",
     "Manifest",
     "Requirement",

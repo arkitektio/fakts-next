@@ -29,8 +29,9 @@ pip install fakts-next
 Optional extras:
 
 ```bash
-pip install fakts-next[qt]    # Qt widgets (endpoint picker, settings cache)
-pip install fakts-next[rath]  # GraphQL transport links for rath
+pip install fakts-next[qt]      # Qt widgets (endpoint picker, settings cache)
+pip install fakts-next[rath]    # GraphQL transport links for rath
+pip install fakts-next[crypto]  # signed alias challenges (Ed25519 verification)
 ```
 
 ## Quickstart
@@ -128,7 +129,10 @@ if alias := await fakts.aget_alias_or_none("kabinet"):
 
 On the first `aget_alias(key)`, fakts *challenges* the aliases of every
 required service (a concurrent HTTP probe against each alias's challenge
-path) and keeps the first one that answers. Subsequent calls return the
+path) and keeps the first one that answers. If the instance carries a
+`challenge_key`, the probe is cryptographically verified: the service must
+sign a fresh nonce with its identity key, so an impostor answering 200
+does not pass (see the protocol section). Subsequent calls return the
 selected alias instantly — no further probing. The winning alias is also
 persisted as the preferred one, so the next process start challenges the
 last-known-good address first. Pass `force_refresh=True` to re-resolve, or
@@ -145,11 +149,14 @@ is re-registered, moved services are re-resolved.
 
 ## The Fakts protocol
 
-Everything a server needs to implement to speak fakts. All exchanges are
-JSON over HTTP(S). `{base}` is the server's fakts base URL as advertised by
-discovery (e.g. `https://example.com/f/`). The negotiation endpoints share
-one response envelope: a `status` field plus status-specific fields
-(`"granted"` carries the payload; `"error"` / `"denied"` carry a message).
+Everything a server needs to implement to speak fakts. This section
+describes **protocol version `1`**; the server advertises the version it
+speaks in the well-known descriptor (`protocol_version`), and clients
+treat a missing value as `"1"`. All exchanges are JSON over HTTP(S).
+`{base}` is the server's fakts base URL as advertised by discovery (e.g.
+`https://example.com/f/`). The negotiation endpoints share one response
+envelope: a `status` field plus status-specific fields (`"granted"`
+carries the payload; `"error"` / `"denied"` carry a message).
 
 ```
 discover ── GET  {url}/.well-known/fakts        Where is the server?
@@ -168,22 +175,18 @@ anchors all following requests:
 {
   "name": "my-deployment",
   "base_url": "https://example.com/f/",
+  "protocol_version": "1",
   "version": "1.2",
   "description": "Our lab's deployment",
   "configure_url": "https://example.com/configure/",
   "claim_url": null,
-  "retrieve_url": null,
-  "ca_crt": null,
-  "layers": [
-    {"identifier": "web", "kind": "WEB"},
-    {"identifier": "tailscale", "kind": "TAILSCALE", "dns_probe": "...", "get_probe": "..."}
-  ]
+  "retrieve_url": null
 }
 ```
 
-`layers` optionally advertises the networks the deployment is reachable
-over; the client probes them and reports the reachable ones in `start/`,
-so the server can compose aliases the client can actually reach.
+`protocol_version` is the fakts protocol version the server speaks
+(this document: `"1"`); `version` is the server software's own version,
+purely informational.
 
 ### 2a. Demand (interactive): the device code flow
 
@@ -203,8 +206,7 @@ The client registers its manifest and asks for a device code —
   },
   "expiration_time_seconds": 300,
   "redirect_uris": [],
-  "requested_client_kind": "development",
-  "supported_layers": ["web"]
+  "requested_client_kind": "development"
 }
 ```
 
@@ -258,6 +260,7 @@ the client reached the server over https). Response:
     "rekuest": {
       "service": "live.arkitekt.rekuest",
       "identifier": "rekuest-prod",
+      "challenge_key": {"kind": "ed25519", "key": "<base64 raw 32-byte public key>"},
       "aliases": [
         {"id": "lan", "host": "10.0.0.5", "port": 8090, "ssl": false, "path": null, "challenge": "ht"},
         {"id": "public", "host": "example.com", "port": null, "ssl": true, "path": "rekuest", "challenge": "ht"}
@@ -274,6 +277,11 @@ the client reached the server over https). Response:
 - `instances` is keyed by the *requirement key* from the manifest and only
   contains granted services. Each alias is one candidate address; its
   challenge URL is `http(s)://{host}[:{port}][/{path}]/{challenge}`.
+- `challenge_key` is the service's identity key. Registering one is
+  **opt-in per service instance** — instances without a key keep the
+  plain 200-challenge. When present, alias challenges must be *signed*
+  (see below). One key per instance — the service has one identity no
+  matter which route reaches it.
 - `statuses` (optional, same keys) reports the outcome per requirement:
   `"granted"`, `"denied"` (user declined) or `"unavailable"` (deployment
   does not offer the service). Older servers omit it; clients coerce
@@ -284,9 +292,34 @@ the client reached the server over https). Response:
 
 ### 4. Using the configuration
 
-- **Alias challenge**: `GET` on an alias's challenge URL must answer
-  `200` if (and only if) the service is reachable through that alias.
-  The client probes aliases in order and uses the first that answers.
+- **Alias challenge (plain)**: `GET` on an alias's challenge URL must
+  answer `200` if (and only if) the service is reachable through that
+  alias. The client probes aliases in order and uses the first that
+  answers.
+- **Alias challenge (signed)**: if the instance carries a
+  `challenge_key`, the client appends a fresh random nonce —
+  `GET {challenge_url}?nonce=<nonce>` — and the service must answer:
+
+  ```json
+  {"signature": "<base64(Ed25519-Sign(private_key, message))>"}
+  ```
+
+  where `message = UTF8("fakts-challenge-v1:" + nonce)`. The client
+  verifies the signature against the pinned public key; with a key
+  pinned, **a plain 200 fails the challenge** (no silent downgrade), so
+  a host that merely answers the probe cannot impersonate the service.
+  The domain tag means the service never signs raw client-supplied
+  bytes; the fresh nonce prevents replaying recorded responses. Keys of
+  an unrecognized `kind` are ignored with a warning (forward
+  compatible). Requires the `crypto` extra
+  (`pip install fakts-next[crypto]`).
+
+  *Scope*: over plain http the signed challenge authenticates the
+  *probe*, not the connection — an active attacker can relay it and
+  hijack the traffic afterwards. Use `ssl: true` aliases for real
+  channel security (pinning the same key at the TLS layer, accepting
+  matching self-signed certificates, is the planned next step — it lets
+  LAN deployments skip public CAs entirely).
 - **Access tokens**: standard OAuth2 *client credentials* flow against
   `auth.token_url` with `client_id`, `client_secret` and the granted
   scopes.

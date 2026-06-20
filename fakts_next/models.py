@@ -101,12 +101,36 @@ class Alias(BaseModel):
         return url
 
 
+class ChallengeKey(BaseModel):
+    """A public key a service uses to prove its identity in alias challenges.
+
+    Registering a key is entirely optional per service instance: without
+    one, the plain 200-challenge applies. When an instance carries a
+    challenge key, the client sends a random nonce with each alias
+    challenge and the service must answer with a signature over the
+    (domain-separated) nonce, made with the matching private key. The
+    client then verifies the signature against this key — a plain 200 is
+    no longer enough.
+    """
+
+    kind: str = "ed25519"
+    """The signature scheme. Currently only "ed25519" is supported; a key
+    of an unsupported kind is ignored (with a warning), so newer schemes
+    do not break older clients."""
+    key: str
+    """The base64-encoded raw public key (32 bytes for ed25519)."""
+
+
 class Instance(BaseModel):
     """Configuration for a service in Fakts."""
 
     service: str
     identifier: str
     aliases: list[Alias] = []
+    challenge_key: Optional[ChallengeKey] = None
+    """Optional public key of the service. If set, alias challenges must
+    answer with a valid signature (see ChallengeKey); the same key is used
+    for all aliases of the instance (one service identity, many routes)."""
 
 
 class AuthFakt(BaseModel):

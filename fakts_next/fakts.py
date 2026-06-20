@@ -25,7 +25,15 @@ from fakts_next.errors import (
 from koil.composition import KoiledModel
 from koil.helpers import unkoil
 
-from .models import ActiveFakts, Alias, GrantStatus, Manifest, Requirement
+from .challenge import generate_nonce, verify_challenge_signature
+from .models import (
+    ActiveFakts,
+    Alias,
+    ChallengeKey,
+    GrantStatus,
+    Manifest,
+    Requirement,
+)
 from .protocols import FaktsCache, FaktsGrant
 from .utils import truncate
 
@@ -394,12 +402,29 @@ class Fakts(KoiledModel):
                 )
             return self.loaded_token
 
-    async def achallenge_alias(self, alias: Alias) -> bool:
+    async def achallenge_alias(
+        self, alias: Alias, challenge_key: Optional[ChallengeKey] = None
+    ) -> bool:
         """Challenge a single alias (async)
 
-        Returns True if the alias' challenge path answered with a 200,
-        raises otherwise.
+        Without a challenge key, the alias' challenge path must answer
+        with a 200. With one, a random nonce is sent along and the
+        response must additionally carry a valid signature over it (see
+        :mod:`fakts_next.challenge`) — a plain 200 is not enough, so a
+        host that merely answers the probe cannot impersonate the service.
+
+        Returns True if the challenge passed, raises otherwise.
         """
+        if challenge_key is not None and challenge_key.kind != "ed25519":
+            logger.warning(
+                "Instance pins a challenge key of unsupported kind '%s'. "
+                "Falling back to the plain (unauthenticated) challenge.",
+                challenge_key.kind,
+            )
+            challenge_key = None
+
+        nonce = generate_nonce() if challenge_key else None
+
         async with aiohttp.ClientSession(
             connector=(
                 aiohttp.TCPConnector(ssl=self.ssl_context) if self.ssl_context else None
@@ -410,6 +435,7 @@ class Fakts(KoiledModel):
         ) as session:
             async with session.get(
                 alias.challenge_path,
+                params={"nonce": nonce} if nonce else None,
             ) as resp:
                 if resp.status != 200:
                     body = await resp.text()
@@ -421,6 +447,28 @@ class Fakts(KoiledModel):
                         f"answered with status code {resp.status} (expected 200). "
                         f"Response body: {truncate(body) or '<empty>'}"
                     )
+
+                if challenge_key is not None and nonce is not None:
+                    try:
+                        data = await resp.json()
+                        signature = data["signature"]
+                    except Exception:
+                        body = await resp.text()
+                        raise FaktsError(
+                            f"The instance pins a challenge key, but the challenge of "
+                            f"alias '{alias.id}' at {alias.challenge_path} did not "
+                            f"answer with a signature. "
+                            f"Response body: {truncate(body) or '<empty>'}"
+                        )
+
+                    if not verify_challenge_signature(challenge_key, nonce, signature):
+                        raise FaktsError(
+                            f"The challenge of alias '{alias.id}' at "
+                            f"{alias.challenge_path} answered with an invalid "
+                            f"signature: the host does not hold the service's "
+                            f"identity key (possible impersonation or a stale "
+                            f"pinned key)."
+                        )
 
                 return True
 
@@ -517,7 +565,10 @@ class Fakts(KoiledModel):
 
             try:
                 challenge_ok = await asyncio.wait_for(
-                    self.achallenge_alias(alias), timeout=self.alias_challenge_timeout
+                    self.achallenge_alias(
+                        alias, challenge_key=instance.challenge_key
+                    ),
+                    timeout=self.alias_challenge_timeout,
                 )
                 if challenge_ok:
                     return (

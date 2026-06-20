@@ -12,7 +12,6 @@ from typing import Awaitable, Callable, List, Optional
 from enum import Enum
 from fakts_next.utils import truncate
 from .utils import (
-    acheck_supported_layers,
     print_device_code_prompt,
     print_succesfull_login,
 )
@@ -156,7 +155,6 @@ class DeviceCodeDemander(SSLContextModel):
                     "expiration_time_seconds": self.expiration_time_seconds,
                     "redirect_uris": self.redirect_uris,
                     "requested_client_kind": self.requested_client_kind,
-                    "supported_layers": await acheck_supported_layers(endpoint),
                 },
             ) as response:
                 if response.status == HTTPStatus.OK:

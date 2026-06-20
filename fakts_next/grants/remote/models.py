@@ -1,5 +1,5 @@
 import ssl
-from typing import List, Protocol, runtime_checkable, Optional, Literal
+from typing import Protocol, runtime_checkable, Optional
 
 import certifi
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,14 +20,6 @@ class SSLContextModel(BaseModel):
         exclude=True,
     )
     """An ssl context to use for the connection to the endpoint."""
-
-
-class Layer(BaseModel):
-    identifier: str
-    kind: Literal["WEB", "TAILSCALE"]
-    dns_probe: str | None = None
-    get_probe: str | None = None
-    description: str | None = None
 
 
 class FaktsEndpoint(BaseModel):
@@ -51,8 +43,10 @@ class FaktsEndpoint(BaseModel):
     If the server does not advertise it, clients fall back to deriving it
     from the base_url."""
     version: Optional[str] = None
-    ca_crt: Optional[str] = None
-    layers: Optional[List[Layer]] = None
+    """The version of the server software (informational)"""
+    protocol_version: Optional[str] = None
+    """The version of the fakts protocol the server speaks. Servers that
+    do not advertise it are treated as speaking protocol version "1"."""
 
 
 @runtime_checkable
