@@ -1,6 +1,7 @@
 """Tests for signed alias challenges (instance challenge keys)."""
 
 import base64
+import sys
 from typing import AsyncIterator, Awaitable, Callable, Tuple
 
 import pytest
@@ -10,8 +11,13 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from fakts_next import Fakts
-from fakts_next.challenge import build_challenge_message, verify_challenge_signature
-from fakts_next.errors import CompositionError
+from fakts_next.challenge import (
+    CHALLENGE_DOMAIN,
+    build_challenge_message,
+    generate_nonce,
+    verify_challenge_signature,
+)
+from fakts_next.errors import CompositionError, FaktsError
 from fakts_next.models import ChallengeKey
 
 from .test_fakts_behavior import CountingGrant, make_fakts_value, make_manifest
@@ -150,6 +156,35 @@ async def test_plain_challenge_without_key_still_passes(challenge_server) -> Non
         alias = await fakts.aget_alias("test", omit_report=True)
 
     assert alias.id == "primary"
+
+
+async def test_missing_cryptography_raises_faktserror(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A pinned key must never silently downgrade: if the optional
+    'cryptography' package cannot be imported, verification raises FaktsError
+    with an install hint rather than returning False."""
+    _, key = make_keypair()
+
+    # Force the in-function `from cryptography...ed25519 import ...` to fail.
+    monkeypatch.setitem(
+        sys.modules,
+        "cryptography.hazmat.primitives.asymmetric.ed25519",
+        None,
+    )
+
+    with pytest.raises(FaktsError, match="cryptography"):
+        verify_challenge_signature(key, "some-nonce", "c2ln")
+
+
+async def test_generate_nonce_is_unique():
+    nonces = {generate_nonce() for _ in range(100)}
+    assert len(nonces) == 100, "Nonces must be fresh per probe"
+
+
+async def test_build_challenge_message_is_domain_separated():
+    assert build_challenge_message("abc") == b"fakts-challenge-v1:abc"
+    assert build_challenge_message("abc") == f"{CHALLENGE_DOMAIN}:abc".encode()
 
 
 async def test_unsupported_key_kind_falls_back_to_plain(challenge_server) -> None:

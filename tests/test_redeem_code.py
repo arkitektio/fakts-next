@@ -44,3 +44,12 @@ def test_redeem_code_grant(deployed_infra: Deployment):
             alias = fakts_next.get_alias("rekuest", omit_challenge=False)
             # The challenge should have resolved to the correct URL (which is reachable in the test environment)
             assert alias.challenge_path == "http://localhost:6888/ht"
+
+            # The redeem flow should have claimed a fully-populated config
+            # end to end: a usable auth block and the required instance.
+            loaded = fakts_next.loaded_fakts
+            assert loaded is not None
+            assert loaded.auth.client_id
+            assert loaded.auth.token_url
+            assert "rekuest" in loaded.instances
+            assert loaded.instances["rekuest"].service == "live.arkitekt.rekuest"
