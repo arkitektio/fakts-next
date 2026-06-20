@@ -38,13 +38,17 @@ def deployed_infra() -> Generator[Deployment, None, None]:
     setup = local(docker_compose_file)
     # Configure the Fakts instance
     setup.add_health_check(
-        url=lambda spec: f"http://localhost:{spec.find_service('lok').get_port_for_internal(80).published}/ht",
+        url=lambda spec: (
+            f"http://localhost:{spec.find_service('lok').get_port_for_internal(80).published}/ht"
+        ),
         service="lok",
         timeout=5,
         max_retries=10,
     )
     setup.add_health_check(
-        url=lambda spec: f"http://localhost:{spec.find_service('rekuest').get_port_for_internal(80).published}/ht",
+        url=lambda spec: (
+            f"http://localhost:{spec.find_service('rekuest').get_port_for_internal(80).published}/ht"
+        ),
         service="rekuest",
         timeout=5,
         max_retries=10,
@@ -52,9 +56,10 @@ def deployed_infra() -> Generator[Deployment, None, None]:
 
     with setup as deployed:
         setup.down()
+
         setup.pull()
 
         setup.up()
-        
+
         setup.check_health()
         yield deployed
