@@ -39,7 +39,7 @@ services:
       MINIO_ROOT_USER: crappygreysetter
     image: minio/minio:RELEASE.2025-02-18T16-25-55Z
     ports:
-    - 6889:9000
+    - 3092:9000
   initc:
     depends_on:
       minio:

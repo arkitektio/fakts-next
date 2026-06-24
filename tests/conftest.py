@@ -2,7 +2,7 @@
 
 from typing import Generator
 import pytest
-from dokker import local, Deployment
+from dokker import Deployment, testing
 import os
 
 project_path = os.path.join(os.path.dirname(__file__), "integration")
@@ -35,7 +35,7 @@ def deployed_infra() -> Generator[Deployment, None, None]:
     Yields:
         Deployment: The deployed instance of the Fakts server application.
     """
-    setup = local(docker_compose_file)
+    setup = testing(docker_compose_file)
     # Configure the Fakts instance
     setup.add_health_check(
         url=lambda spec: (
