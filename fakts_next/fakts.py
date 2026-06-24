@@ -23,7 +23,7 @@ from fakts_next.errors import (
     ServiceNotGrantedError,
 )
 from koil.composition import KoiledModel
-from koil.helpers import unkoil
+from koil.bridge import unkoil
 
 from .challenge import generate_nonce, verify_challenge_signature
 from .models import (
@@ -565,9 +565,7 @@ class Fakts(KoiledModel):
 
             try:
                 challenge_ok = await asyncio.wait_for(
-                    self.achallenge_alias(
-                        alias, challenge_key=instance.challenge_key
-                    ),
+                    self.achallenge_alias(alias, challenge_key=instance.challenge_key),
                     timeout=self.alias_challenge_timeout,
                 )
                 if challenge_ok:
@@ -870,9 +868,7 @@ class Fakts(KoiledModel):
         An *undeclared* key still raises :class:`AliasNotFoundError` —
         that is a bug in the app, not a runtime condition.
         """
-        if not any(
-            req.key == fakts_key for req in (self.manifest.requirements or [])
-        ):
+        if not any(req.key == fakts_key for req in (self.manifest.requirements or [])):
             raise self._undeclared_key_error(fakts_key)
 
         try:

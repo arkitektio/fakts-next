@@ -1,6 +1,6 @@
 from fakts_next.fakts import get_current_fakts_next
 from fakts_next.models import Alias
-from koil.helpers import unkoil
+from koil.bridge import unkoil
 
 
 async def afakt(key: str, omit_challenge: bool = False) -> Alias:
