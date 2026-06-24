@@ -423,7 +423,6 @@ source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "certifi" },
-    { name = "dokker" },
     { name = "koil" },
     { name = "oauthlib" },
     { name = "pydantic" },
@@ -458,8 +457,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.11.18" },
     { name = "certifi", specifier = ">=2025.4.26" },
     { name = "cryptography", marker = "extra == 'crypto'", specifier = ">=42" },
-    { name = "dokker", specifier = ">=2.5" },
-    { name = "koil", specifier = ">=2.0.4" },
+    { name = "koil", specifier = ">=3.3.1" },
     { name = "oauthlib", specifier = ">=3.3.1" },
     { name = "pydantic", specifier = ">2" },
     { name = "qtpy", marker = "extra == 'qt'", specifier = ">=2.4.3" },
@@ -470,7 +468,7 @@ provides-extras = ["qt", "rath", "crypto"]
 [package.metadata.requires-dev]
 dev = [
     { name = "cryptography", specifier = ">=42" },
-    { name = "dokker", specifier = ">=2.4" },
+    { name = "dokker", specifier = ">=2.5" },
     { name = "pyqt5", specifier = ">=5.15.11" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
@@ -631,14 +629,14 @@ wheels = [
 
 [[package]]
 name = "koil"
-version = "3.2.0"
+version = "3.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7e/9d/bb1d482a3642f397207411ffc72b09ea586dcb69678033bad0f3c69405e6/koil-3.2.0.tar.gz", hash = "sha256:449a2a775c72999109a0f00459ff431676a1a3844aceb6c07698cb3b7e96fc58", size = 28889, upload-time = "2026-06-10T16:07:18.989Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/f2/c803075854fda0c08201a280358a694206b4dcbc1c1f19981eec73b0f107/koil-3.3.1.tar.gz", hash = "sha256:18415e55b9f87651127db9aed284fca5bdfdd8d9c5fa9e44b0acdfdccf7fccf6", size = 40936, upload-time = "2026-06-11T14:59:26.835Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/95/fd99549c89ac95d3dfb363fa59a444e39a23c583d4c242e61fd5db95d6f0/koil-3.2.0-py3-none-any.whl", hash = "sha256:5e507eaacc7db7981517f5205efbca54b5dba24214dbd9d259ffba8cb5f261a5", size = 33726, upload-time = "2026-06-10T16:07:17.961Z" },
+    { url = "https://files.pythonhosted.org/packages/64/0b/af9f50f28c16a5378f23096766a7983b0904026fad24eee09a1b1eb17265/koil-3.3.1-py3-none-any.whl", hash = "sha256:603bb640c85bb70e9c9f08bbb90b2bf3196c8e15a3f287d79525539d5e34c3ab", size = 47270, upload-time = "2026-06-11T14:59:27.885Z" },
 ]
 
 [[package]]
