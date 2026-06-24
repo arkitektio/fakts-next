@@ -1,5 +1,5 @@
 from fakts_next.models import ActiveFakts
-from ..errors import GrantError
+from .errors import RemoteGrantError
 import logging
 
 from .models import Demander, Discovery, Claimer
@@ -10,10 +10,6 @@ logger = logging.getLogger(__name__)
 
 Token = str
 EndpointUrl = str
-
-
-class RemoteGrantError(GrantError):
-    """Base class for all remotegrant errors"""
 
 
 class RemoteGrant(BaseModel):
@@ -66,7 +62,10 @@ class RemoteGrant(BaseModel):
         try:
             endpoint = await self.discovery.adiscover()
         except Exception as e:
-            raise RemoteGrantError(f"Could not discover endpoint: {e}") from e
+            raise RemoteGrantError(
+                f"Could not discover the Fakts endpoint using "
+                f"{self.discovery.__class__.__name__}: {e}"
+            ) from e
 
         token = await self.demander.ademand(endpoint)
 

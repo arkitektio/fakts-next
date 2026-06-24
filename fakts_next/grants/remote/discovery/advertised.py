@@ -1,14 +1,12 @@
 from typing import Dict, AsyncGenerator, List, Tuple, Set
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import Field, field_validator
 from socket import AF_INET, IPPROTO_UDP
 import asyncio
 import json
 import logging
 from pydantic import BaseModel
-import ssl
-import certifi
 from .utils import discover_url
-from fakts_next.grants.remote.models import FaktsEndpoint
+from fakts_next.grants.remote.models import FaktsEndpoint, SSLContextModel
 from fakts_next.grants.remote.errors import DiscoveryError
 
 logger = logging.getLogger(__name__)
@@ -106,7 +104,7 @@ async def alisten(bind: ListenBinding, strict: bool = False) -> AsyncGenerator[B
         )
 
         while True:
-            data, _ = await read_queue.get()
+            data, addr = await read_queue.get()
             try:
                 data = str(data, "utf8")
                 if data.startswith(bind.magic_phrase):
@@ -120,15 +118,22 @@ async def alisten(bind: ListenBinding, strict: bool = False) -> AsyncGenerator[B
                     except json.JSONDecodeError as e:
                         logger.error("Received Request but it was not valid json")
                         if strict:
-                            raise e
+                            raise DiscoveryError(
+                                f"Received a beacon from {addr[0]}:{addr[1]} with the "
+                                f"correct magic phrase, but its payload is not valid "
+                                f"JSON: {endpoint!r}"
+                            ) from e
 
                 else:
                     logger.error(f"Received Non Magic Response {data}. Maybe somebody sends")
 
-            except UnicodeEncodeError as e:
+            except UnicodeDecodeError as e:
                 logger.error("Couldn't decode received message")
                 if strict:
-                    raise e
+                    raise DiscoveryError(
+                        f"Received a beacon from {addr[0]}:{addr[1]} that is not "
+                        f"valid utf-8 and could not be decoded."
+                    ) from e
 
     except asyncio.CancelledError as e:
         if transport:
@@ -178,25 +183,19 @@ async def alisten_pure(bind: ListenBinding, strict: bool = False) -> AsyncGenera
     return
 
 
-class FirstAdvertisedDiscovery(BaseModel):
+class FirstAdvertisedDiscovery(SSLContextModel):
     """A discovery that will return the first endpoint that is advertised
 
     This discovery will listen on a broadcast port for beacons.
     It will then try to connect to the endpoint and return it.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     binding: ListenBinding = Field(default_factory=ListenBinding)
     """The address to bind to"""
     strict: bool = False
     """Should we error on bad Beacons"""
     discovered_endpoints: Dict[str, FaktsEndpoint] = Field(default_factory=dict)
     """A cache of discovered endpoints"""
-    ssl_context: ssl.SSLContext = Field(
-        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
-        exclude=True,
-    )
-    """ An ssl context to use for the connection to the endpoint"""
     allow_appending_slash: bool = Field(
         default=True,
         description="If the url does not end with a slash, should we append one? ",
@@ -227,12 +226,26 @@ class FirstAdvertisedDiscovery(BaseModel):
             A valid endpoint
         """
 
+        failed_beacons: List[str] = []
+
         async for beacon in alisten_pure(self.binding, strict=self.strict):
             try:
                 endpoint = await discover_url(beacon.url, self.ssl_context)
                 return endpoint
             except Exception as e:
                 logger.error(f"Could not connect to beacon {beacon.url}: {e}")
+                failed_beacons.append(f"{beacon.url}: {e}")
                 continue
 
-        raise DiscoveryError("Could not find any endpoint")
+        raise DiscoveryError(
+            f"No advertised endpoint found while listening on "
+            f"{self.binding.address}:{self.binding.port} "
+            f"(magic phrase '{self.binding.magic_phrase}'). "
+            + (
+                "Advertised beacons that could not be reached:\n  - "
+                + "\n  - ".join(failed_beacons)
+                if failed_beacons
+                else "No beacons were received at all. Is a server broadcasting on "
+                "this network, and is UDP broadcast traffic allowed?"
+            )
+        )

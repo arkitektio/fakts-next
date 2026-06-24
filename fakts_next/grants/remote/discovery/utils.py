@@ -3,6 +3,7 @@ import aiohttp
 import logging
 import ssl
 from fakts_next.grants.remote.errors import DiscoveryError
+from fakts_next.utils import truncate
 from typing import Optional, List, Tuple
 
 logger = logging.getLogger(__name__)
@@ -43,17 +44,35 @@ async def check_wellknown(url: str, ssl_context: ssl.SSLContext, timeout: int = 
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
             if resp.status == 200:
-                data = await resp.json()
+                try:
+                    data = await resp.json()
+                except Exception as e:
+                    body = await resp.text()
+                    raise DiscoveryError(
+                        f"The well-known endpoint {url} answered with status 200, "
+                        f"but the response is not valid JSON. Is a Fakts server "
+                        f"really running at this address? "
+                        f"Response body: {truncate(body) or '<empty>'}"
+                    ) from e
 
                 if "name" not in data:
                     logger.error(f"Malformed answer: {data}")
-                    raise DiscoveryError("Malformed Answer")
+                    raise DiscoveryError(
+                        f"The well-known endpoint {url} answered, but the response "
+                        f"is missing the required 'name' field. Is a Fakts server "
+                        f"really running at this address? Received: {truncate(str(data))}"
+                    )
 
                 return FaktsEndpoint(**data)
 
             else:
+                body = await resp.text()
                 logger.error(f"Could not retrieve on the endpoint: {resp.status}")
-                raise DiscoveryError(f"Error! We could not retrieve the endpoint. {url} ")
+                raise DiscoveryError(
+                    f"The well-known endpoint {url} answered with status code "
+                    f"{resp.status} (expected 200). Is the Fakts server running and "
+                    f"is the URL correct? Response body: {truncate(body) or '<empty>'}"
+                )
 
 
 async def discover_url(
@@ -95,7 +114,10 @@ async def discover_url(
     if "://" not in url:
         logger.info(f"No protocol specified on {url}")
         if not auto_protocols or len(auto_protocols) == 0:
-            raise DiscoveryError("No protocol specified and no auto protocols specified")
+            raise DiscoveryError(
+                f"The url '{url}' does not specify a protocol (e.g. 'https://{url}'), "
+                f"and no auto_protocols are configured on the discovery to try instead."
+            )
 
         errors: list[Tuple[str, Exception]] = []
 

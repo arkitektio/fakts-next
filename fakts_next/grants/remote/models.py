@@ -1,14 +1,25 @@
-from typing import List, Protocol, runtime_checkable, Optional, Literal
-from pydantic import BaseModel
+import ssl
+from typing import Protocol, runtime_checkable, Optional
+
+import certifi
+from pydantic import BaseModel, ConfigDict, Field
 from fakts_next.models import ActiveFakts
 
 
-class Layer(BaseModel):
-    identifier: str
-    kind: Literal["WEB", "TAILSCALE"]
-    dns_probe: str | None = None
-    get_probe: str | None = None
-    description: str | None = None
+class SSLContextModel(BaseModel):
+    """Base model that carries an SSL context and allows arbitrary types.
+
+    Shared by the remote grant components (discovery, demanders, claimers)
+    that need to make TLS connections to a fakts_next server.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    ssl_context: ssl.SSLContext = Field(
+        default_factory=lambda: ssl.create_default_context(cafile=certifi.where()),
+        exclude=True,
+    )
+    """An ssl context to use for the connection to the endpoint."""
 
 
 class FaktsEndpoint(BaseModel):
@@ -27,9 +38,15 @@ class FaktsEndpoint(BaseModel):
     """ A human readable description for the endpoint"""
     retrieve_url: Optional[str] = None
     claim_url: Optional[str] = None
+    configure_url: Optional[str] = None
+    """The user-facing page where a device code can be entered/approved.
+    If the server does not advertise it, clients fall back to deriving it
+    from the base_url."""
     version: Optional[str] = None
-    ca_crt: Optional[str] = None
-    layers: Optional[List[Layer]] = None
+    """The version of the server software (informational)"""
+    protocol_version: Optional[str] = None
+    """The version of the fakts protocol the server speaks. Servers that
+    do not advertise it are treated as speaking protocol version "1"."""
 
 
 @runtime_checkable
@@ -91,31 +108,32 @@ class Discovery(Protocol):
 
 @runtime_checkable
 class Claimer(Protocol):
-    """Discovery is the abstract base class for discovery mechanisms
+    """Claimer is the abstract base class for claiming mechanisms
 
-    A discovery mechanism is a way to find a Fakts endpoint
-    that can be used to retrieve the configuration.
+    A claimer uses a token to claim (retrieve) the active configuration
+    from a previously discovered Fakts endpoint.
 
-    This class provides an asynchronous interface, as the discovery can
-    envolve lenghty operations such as network requests or waiting for
-    user input.
+    This class provides an asynchronous interface, as claiming can
+    involve lengthy operations such as network requests.
     """
 
     async def aclaim(self, token: str, endpoint: FaktsEndpoint) -> ActiveFakts:
-        """Discovers an endpoint.
+        """Claims the configuration from the endpoint.
 
-        This method should return an endpoint that can be used to retrieve
-        the configuration. If no endpoint can be found, it should raise
-        a DiscoveryError.
+        This method should use the token to retrieve the active configuration
+        from the endpoint. If the configuration cannot be claimed, it should
+        raise a ClaimError.
 
         Parameters
         ----------
-        request : FaktsRequest
-            The request that is being processed.
+        token : str
+            The token to use for claiming the configuration.
+        endpoint : FaktsEndpoint
+            The endpoint to claim the configuration from.
 
         Returns
         -------
-        FaktsEndpoint
-            The endpoint that can be used to retrieve the configuration.
+        ActiveFakts
+            The active configuration claimed from the endpoint.
         """
         ...

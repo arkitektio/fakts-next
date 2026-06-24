@@ -22,100 +22,55 @@ class FaktsGrant(Protocol):
         """Loads the configuration from the grant
 
         Depending on the grant, this function may load the configuration
-        from a file, from a remote endpoint, from a database, etc, the
-        implementation of the grant will determine how the configuration
-        is loaded.
-
-        Generally, the grant should use preconfigured values to set the
-        configuration retrievel logic, and should not use the request
-        object to determine how to load the configuration.
-
-        The request object is used to pass information between different
-        grants, and should only be used to forward conditional information
-        like "skip cache" or "force refresh". Which are mainly handled
-        by meta grants.
-
-
-
-        Parameters
-        ----------
-        request : FaktsRequest
-            The request object that may contain additional information needed for loading the configuration.
+        from a file, from a remote endpoint, from a database, etc. The
+        implementation of the grant determines how the configuration
+        is loaded, generally from preconfigured values on the grant.
 
         Returns
         -------
-        dict
+        ActiveFakts
             The configuration loaded from the grant.
 
         Raises
         ------
-
         GrantError
-            If the grant failed to load the configuration.+
-
-
-
+            If the grant failed to load the configuration.
         """
         ...
 
 
 @runtime_checkable
 class FaktsCache(Protocol):
-    """FaktsGrant
+    """FaktsCache
 
-    A FaktsGrant is a grant that can be used to load configuration
-    from a specific source. It can be used to load configuration
-    from a file, from a remote endpoint, from a database, etc.
+    A FaktsCache stores a loaded configuration so it can be reused across
+    runs without re-querying the grant. It can be backed by a file, by
+    Qt settings, or any other persistent store.
     """
 
     async def aload(self) -> ActiveFakts | None:
-        """Loads the configuration from the grant
+        """Loads the cached configuration
 
-        Depending on the grant, this function may load the configuration
-        from a file, from a remote endpoint, from a database, etc, the
-        implementation of the grant will determine how the configuration
-        is loaded.
-
-        Generally, the grant should use preconfigured values to set the
-        configuration retrievel logic, and should not use the request
-        object to determine how to load the configuration.
-
-        The request object is used to pass information between different
-        grants, and should only be used to forward conditional information
-        like "skip cache" or "force refresh". Which are mainly handled
-        by meta grants.
-
-
-
-        Parameters
-        ----------
-        request : FaktsRequest
-            The request object that may contain additional information needed for loading the configuration.
+        Returns the previously cached configuration, or ``None`` if nothing
+        is cached or the cache is no longer valid (e.g. expired or stale).
 
         Returns
         -------
-        dict
-            The configuration loaded from the grant.
-
-        Raises
-        ------
-
-        GrantError
-            If the grant failed to load the configuration.+
-
-
-
+        ActiveFakts | None
+            The cached configuration, or ``None`` if unavailable.
         """
         ...
 
     async def aset(self, value: ActiveFakts) -> None:
-        """Refreshes the configuration from the grant
+        """Stores the configuration in the cache
 
-        This function is used to refresh the configuration from the grant.
-        This is used to refresh the configuration from the grant, and should
-        be used to refresh the configuration from the grant.
+        Persists the given configuration so it can later be retrieved by
+        :meth:`aload`.
 
-        The request object is used to pass information
+        Parameters
+        ----------
+        value : ActiveFakts
+            The configuration to cache.
         """
         ...
 
