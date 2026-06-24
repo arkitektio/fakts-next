@@ -90,7 +90,7 @@ A `RemoteGrant` is composed of three pluggable parts:
 
 | Role | Question it answers | Implementations |
 |---|---|---|
-| **Discovery** | *Where is the server?* | `WellKnownDiscovery` (`/.well-known/fakts`), `FirstAdvertisedDiscovery` (UDP beacons), `SelectBeaconWidget` (Qt picker), `StaticDiscovery` |
+| **Discovery** | *Where is the coordination server?* | `WellKnownDiscovery` (`/.well-known/fakts`), `FirstAdvertisedDiscovery` (UDP beacons), `SelectBeaconWidget` (Qt picker), `StaticDiscovery` |
 | **Demander** | *How do we get a claim token?* | `DeviceCodeDemander` (browser approval), `RedeemDemander` (pre-issued token, headless), `StaticDemander` |
 | **Claimer** | *How do we fetch the config?* | `ClaimEndpointClaimer` (the default), `StaticClaimer` |
 
@@ -334,6 +334,74 @@ the client reached the server over https). Response:
     "functional": true
   }
   ```
+
+## Design notes
+
+Most of fakts is machinery for *negotiating* configuration that a smaller app
+would simply hardcode. Each piece is there because the obvious simpler choice
+breaks in a real client–server deployment. The decisions worth knowing:
+
+**Negotiation instead of static configuration.** The obvious approach is to
+bake service URLs into the app (or read them from a config file). But in a
+client–server world the deployment owns the topology: the same service may live
+on a LAN address, a VPN address and a public one; services move; each
+deployment mints its own OAuth2 client. So the app declares *what* it needs (the
+manifest) and the deployment decides *where* — fakts negotiates once and caches
+the result. When you genuinely don't need negotiation (config injected by a
+container, or hardcoded in a test) the static path is still there: see
+[`EnvGrant` and `HardFaktsGrant`](#containers-configuration-from-the-environment).
+
+**`RemoteGrant` is three pluggable parts, not one.** The remote flow could be a
+single object, but its three questions vary independently: *where is the server*
+(well-known URL, UDP beacon, Qt picker, static), *how do we get approved*
+(device-code browser flow, pre-issued redeem token, static), and *how do we
+fetch the config* (claim endpoint, static). Splitting Discovery / Demander /
+Claimer into runtime-checkable protocols lets you compose new combinations — and
+implement a part in your own code — without touching the orchestration. See
+[discover → demand → claim](#the-remote-protocol-discover--demand--claim).
+
+**Challenge once, then stick.** Two tempting extremes are both wrong: re-probing
+every alias on every `aget_alias` is slow (each probe carries a timeout) and
+churny, while trusting the cached address blindly hands back dead endpoints when
+a service moves. fakts instead challenges all required services once on first
+resolution, keeps the first alias that answers, and returns it instantly
+thereafter — persisting it as the preferred address so the *next* process start
+tries the last-known-good first. Re-resolution happens only on
+`force_refresh=True` or the cached-config self-heal path. See
+[alias resolution](#alias-resolution-challenge-once-then-stick).
+
+**Signed challenges are opt-in per service instance.** Always requiring
+signatures would force every deployment — including legacy ones and TLS-only
+services whose certificate already proves identity — to mint and manage an
+Ed25519 key. Never allowing them means a host that merely answers `200` on a
+shared network can impersonate a service. Per-instance opt-in puts the bar
+exactly where a deployment wants it, and once a key is pinned there is no silent
+downgrade to a plain `200`. The honest limit: over plain http a signature
+authenticates the *probe*, not the channel — use `ssl: true` aliases for real
+channel security. See [using the configuration](#4-using-the-configuration).
+
+**The cache key is a hash of the manifest *and* the server URL.** A single
+path-keyed cache file would silently serve stale data across two boundaries that
+matter: a changed manifest is a changed *permission* boundary (new scopes or
+requirements), and a changed URL is a different *deployment* (dev vs prod).
+Hashing both means either change invalidates the cache automatically. Writes are
+atomic (temp file + rename) and a corrupt cache is treated as a miss and
+reloaded — caching is an optimization, never a thing that can break startup. See
+[caching & self-healing](#caching--self-healing).
+
+**Denial is a first-class outcome, not an error.** If a user declining an
+optional service looked the same as an outage, app authors would mark everything
+required and users would grant everything — defeating consent. So the server's
+per-key `statuses` distinguish `granted` / `denied` / `unavailable`,
+`ServiceNotGrantedError` (a subclass of `AliasNotFoundError`) is catchable, and
+`aget_alias_or_none` lets an app degrade gracefully. The end user stays in
+control of what an app may reach. See
+[what the server grants](#activefakts-what-the-server-grants).
+
+**One instance, sync *and* async.** Rather than ship two clients that drift
+apart, fakts writes the async methods (`aget_alias`, `aget_token`, …) and
+derives the synchronous ones from them via [koil](https://github.com/jhnnsrs/koil),
+so both surfaces share a single implementation and a single event loop.
 
 ## Recipes
 
