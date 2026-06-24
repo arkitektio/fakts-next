@@ -1,6 +1,43 @@
 # CHANGELOG
 
 
+## v4.0.0 (2026-06-24)
+
+### Bug Fixes
+
+- A bit more readme
+  ([`768851b`](https://github.com/arkitektio/fakts-next/commit/768851bfe54684ae3a34931ffbd595c0e609e82e))
+
+- Add more documentation
+  ([`b195dda`](https://github.com/arkitektio/fakts-next/commit/b195ddaf2f3ae872e8a07e83bb34e773992e8932))
+
+- Deprecated helpers + dokker update
+  ([`c060fa5`](https://github.com/arkitektio/fakts-next/commit/c060fa5db537d0c16b175b4b204e438fa6d384ff))
+
+- Fix dokker (testing vs local)
+  ([`8fadc7c`](https://github.com/arkitektio/fakts-next/commit/8fadc7ccee0d775c8be52ee1459a58febbea3355))
+
+- More tests for non trivial code paths
+  ([`79a36bb`](https://github.com/arkitektio/fakts-next/commit/79a36bbf5a575e787bb1835ff507b2cc3a27ff2c))
+
+- New fixes
+  ([`f7404fd`](https://github.com/arkitektio/fakts-next/commit/f7404fd96afb69e4729e206368819693dcb39302))
+
+- Pin koil
+  ([`c9255f6`](https://github.com/arkitektio/fakts-next/commit/c9255f6fb9659f0464f6ffef5d2e996a56b5ec83))
+
+### Features
+
+- Massive refactor introducing error handeling
+  ([`0f4249a`](https://github.com/arkitektio/fakts-next/commit/0f4249a2bebc897378f48e30df40961c4e370725))
+
+- With cryptography
+  ([`981d708`](https://github.com/arkitektio/fakts-next/commit/981d708d692d23a9fe80c8f713156d9917e59e55))
+
+- With unit tests for next
+  ([`b757a87`](https://github.com/arkitektio/fakts-next/commit/b757a872740e0f70ecbb59220923992a9cbd0135))
+
+
 ## v3.1.2 (2026-04-15)
 
 
