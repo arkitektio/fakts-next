@@ -430,7 +430,7 @@ wheels = [
 
 [[package]]
 name = "fakts-next"
-version = "4.1.0rc2"
+version = "4.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
