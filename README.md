@@ -9,9 +9,8 @@
 > **Use `fakts>=2` instead.** Nothing here is maintained: the last substantive change
 > was 2026-06-24 and the last release on PyPI is 4.1.0 (2026-06-25).
 >
-> It is kept only because `arkitekt_next` still imports `fakts_next` and depends on
-> this directory through an editable path; that consumer needs migrating to `fakts>=2`
-> before this can be removed.
+> Its last local consumer, `arkitekt_next`, is itself deprecated (renamed to
+> `arkitekt`, which already depends on `fakts>=2`), so nothing live needs this any more.
 
 [![codecov](https://codecov.io/gh/jhnnsrs/fakts-next/branch/main/graph/badge.svg?token=UGXEA2THBV)](https://codecov.io/gh/jhnnsrs/fakts-next)
 [![PyPI version](https://badge.fury.io/py/fakts-next.svg)](https://pypi.org/project/fakts-next/)
