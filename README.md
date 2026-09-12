@@ -1,8 +1,21 @@
 # fakts-next
 
+> # ⚠️ DEPRECATED — do not use for new work
+>
+> This package was **renamed to [`fakts`](https://github.com/jhnnsrs/fakts)**. It was
+> published as `fakts-next` up to **4.x**; from **2.0.0** the same client is published
+> as `fakts`, and the import root is `fakts` (`fakts_next` is gone).
+>
+> **Use `fakts>=2` instead.** Nothing here is maintained: the last substantive change
+> was 2026-06-24 and the last release on PyPI is 4.1.0 (2026-06-25).
+>
+> It is kept only because `arkitekt_next` still imports `fakts_next` and depends on
+> this directory through an editable path; that consumer needs migrating to `fakts>=2`
+> before this can be removed.
+
 [![codecov](https://codecov.io/gh/jhnnsrs/fakts-next/branch/main/graph/badge.svg?token=UGXEA2THBV)](https://codecov.io/gh/jhnnsrs/fakts-next)
 [![PyPI version](https://badge.fury.io/py/fakts-next.svg)](https://pypi.org/project/fakts-next/)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://pypi.org/project/fakts-next/)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-no-red.svg)](https://pypi.org/project/fakts/)
 ![Maintainer](https://img.shields.io/badge/maintainer-jhnnsrs-blue)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/fakts-next.svg)](https://pypi.python.org/pypi/fakts-next/)
 [![PyPI status](https://img.shields.io/pypi/status/fakts-next.svg)](https://pypi.python.org/pypi/fakts-next/)
